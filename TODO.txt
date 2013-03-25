@@ -1,0 +1,45 @@
+- consider using venusian for the decorators
+  http://docs.pylonsproject.org/projects/venusian/en/latest/
+
+- currently, given the following:
+    class RootController(Controller):
+      @expose
+      def foo(self, request): return 'bar'
+  a request to "/foo" will return "bar" (as expected). however
+  "/foo/zig" does not yield a 404 as it should.
+
+- do *extensible* request path translation, e.g.
+    /foo/bar/file.ext becomes Class Root > Class Bar > method 'file_ext'
+  or something like that...
+
+- support @index(expose=True), which is equivalent to specifying
+  both @index *and* @expose, ie. it makes the following method:
+    @index(expose=True)
+    def index(...): ...
+  be accessible at both /path/ and /path/index.
+
+- does pyramid_handlers not pollute the class namespace... how does
+  it achieve that????
+  the unit test from
+    https://github.com/Pylons/pyramid_handlers/blob/master/pyramid_handlers/tests.py
+  sort of implies that:
+    def test_add_handler_doesnt_mutate_expose_dict(self):
+        config = self._makeOne()
+        views = []
+        def dummy_add_view(**kw):
+            views.append(kw)
+        config.add_view = dummy_add_view
+        exposed = [{'name':'^action3000$'}]
+        class MyView(object):
+            def action(self): # pragma: no cover
+                return 'response'
+            action.__exposed__ = exposed
+        config.add_handler('name', '/{action}', MyView)
+        self.assertEqual(exposed[0], {'name':'^action3000$'}) # not mutated
+
+- convert RootController.__init__(expose=False) => RootController.__init__(indirect=True)
+
+- add an `autoexpose` attribute to @expose_defaults
+
+- create a command-line program that detects RootControllers and displays
+  their hierarchy tree...

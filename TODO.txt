@@ -37,9 +37,31 @@
         config.add_handler('name', '/{action}', MyView)
         self.assertEqual(exposed[0], {'name':'^action3000$'}) # not mutated
 
-- convert RootController.__init__(expose=False) => RootController.__init__(indirect=True)
+- perhaps change Controller.__init__(expose) to Controller.__init__(indirect)
+  which is more in tune with how the rest of the framework interprets the
+  attribute.
 
 - add an `autoexpose` attribute to @expose_defaults
 
 - create a command-line program that detects RootControllers and displays
   their hierarchy tree...
+
+- this doesn't work as it should:
+
+    class Base(Controller):
+      @fiddle
+      def first(self, request):
+        # check something...
+
+    class Extend(Base):
+      @fiddle
+      def second(self, request):
+        # check something else...
+
+  currently, only the first one gets called...
+  (unit test pyramid_controllers.test_dispatcher.test_fiddle_with_subclassing
+  tests this but is disabled)
+
+- implement a method name transformation logic. eg. if a request comes
+  in for "such & such", then look up "such_and_such"... ok, that might
+  be a bit too much, but perhaps something like 'such___such'?

@@ -24,7 +24,7 @@ from pyramid.httpexceptions import HTTPException, WSGIHTTPException
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPForbidden
 from pyramid.renderers import render_to_response
 from .controller import Controller
-from .util import adict
+from .util import adict, isstr
 
 path2meth = re.compile('[^a-zA-Z0-9_]')
 
@@ -49,6 +49,11 @@ class Dispatcher(object):
   and evaluating a pyramid-controllers Controller hierarchy.
   '''
 
+  PCATTR = '__pyramid_controllers__'
+  NAME_INDEX   = ''
+  NAME_DEFAULT = '*'
+  NAME_LOOKUP  = '...'
+
   #----------------------------------------------------------------------------
   def __init__(self, defaultForceSlash=True, autoDecorate=True, *args, **kw):
     super(Dispatcher, self).__init__(*args, **kw)
@@ -59,20 +64,18 @@ class Dispatcher(object):
   def getMeta(self, controller):
     meta = adict(fiddle=[], expose={}, index=[], lookup=[], default=[])
     for name, attr in inspect.getmembers(controller):
-      apc = getattr(attr, '__pyramid_controllers__', None)
+      apc = getattr(attr, self.PCATTR, None)
       if not apc:
         continue
       for dectype in ('fiddle', 'lookup', 'default', 'index'):
         if getattr(apc, dectype, []):
           meta[dectype].append(attr)
       for exp in apc.expose or []:
-        # if exp.index:
-        #   meta.index.append(attr)
-        # elif meta.name:
         if exp.name:
-          if not meta.name in meta.expose:
-            meta.expose[exp.name] = []
-          meta.expose[exp.name].append(attr)
+          for ename in exp.name:
+            if not ename in meta.expose:
+              meta.expose[ename] = []
+            meta.expose[ename].append(attr)
     return meta
 
   #----------------------------------------------------------------------------
@@ -82,7 +85,7 @@ class Dispatcher(object):
     # TODO: how to avoid this object attribute pollution?...
     # TODO: what if this controller uses dynamically generated methods
     #       or __getitem__?...
-    pc = getattr(controller, '__pyramid_controllers__', None)
+    pc = getattr(controller, self.PCATTR, None)
     if pc is None:
       pc = controller.__pyramid_controllers__ = adict()
     if pc.meta is not None:
@@ -100,7 +103,7 @@ class Dispatcher(object):
     #           - check response object type
     #           - extensible filter function
     if dectype == 'expose':
-      if spec.name and remainder[0] != spec.name:
+      if spec.name and remainder[0] not in spec.name:
         return None
     if response:
       if spec.renderer is None:
@@ -121,13 +124,79 @@ class Dispatcher(object):
       raise TypeError('get-op called on non-controller')
     meta = self.getCachedMeta(controller)
     for handler in meta[dectype]:
-      apc = getattr(handler, '__pyramid_controllers__', None)
+      apc = getattr(handler, self.PCATTR, None)
       if not apc:
         continue
       spec = self._select(request, None, controller, handler, dectype, remainder, getattr(apc, dectype, []))
       if spec is not None:
         return (handler, spec)
     return (None, None)
+
+  #----------------------------------------------------------------------------
+  def getEntries(self, controller, includeIndirect=False, sortcmp=None):
+    '''
+    Lists all the entrypoints exposed by `controller` - primarily used
+    by DescribeController but done here so that access to and naming
+    of the controller variables is managed centrally. The returned
+    generator iterates over tuples of (NAME, HANDLER) in alphabetic
+    order of the exposed NAME (or as specified by `sortcmp` if
+    provided). The following special names are returned:
+
+    * Dispatcher.NAME_INDEX   - @index handler
+    * Dispatcher.NAME_DEFAULT - @default handler
+    * Dispatcher.NAME_LOOKUP  - @lookup handler
+
+    @index handlers are returned first, then @expose'd handlers,
+    followed by @default and @lookup handlers.
+
+    IMPORTANT: returned names and pairs may not be unique! For
+    example, if two handlers are exposed with the same alias but have
+    different rendering conditions, then they will both be returned in
+    undefined order.
+    '''
+    meta = self.getCachedMeta(controller)
+    for meth in meta.index:
+      yield ('', meth)
+    names = dict()
+    for name, curexp in meta.expose.items():
+      names[name] = curexp[:]
+    # todo: it would probably be better to create a subclass of
+    #       dict() that does this directly...
+    def appto(name, attr):
+      if name not in names:
+        names[name] = []
+      names[name].append(attr)
+    hasIndirect = False
+    for name, attr in inspect.getmembers(controller):
+      if isinstance(attr, Controller):
+        # todo: should this be `filtered` instead?...
+        # todo: what if this is aliased...
+        if includeIndirect or attr._pyramid_controllers.expose is True:
+          hasIndirect = hasIndirect or not attr._pyramid_controllers.expose
+          appto(name, attr)
+        continue
+      if type(attr) in (types.TypeType, types.ClassType):
+        # todo: check that type(handler()) == Controller...
+        # todo: check handler()._pyramid_controllers.expose is True...
+        appto(name, attr)
+        continue
+      if not callable(attr):
+        continue
+      apc = getattr(attr, self.PCATTR, None)
+      if not apc:
+        continue
+      for exp in apc.expose or []:
+        if exp.name:
+          continue
+        appto(name, attr)
+    for name in sorted(names.keys(), cmp=sortcmp):
+      for attr in names[name]:
+        yield (name, attr)
+    for meth in meta.default:
+      yield ('*', meth)
+    if not hasIndirect:
+      for meth in meta.lookup:
+        yield ('...', meth)
 
   #----------------------------------------------------------------------------
   def getFiddler(self, request, controller, remainder):
@@ -165,7 +234,7 @@ class Dispatcher(object):
       # TODO: check that type(handler()) == Controller...
       # TODO: check handler()._pyramid_controllers.expose is True...
       return handler
-    pc = getattr(handler, '__pyramid_controllers__', None)
+    pc = getattr(handler, self.PCATTR, None)
     if not pc:
       return None
     for spec in pc.expose:
@@ -296,7 +365,7 @@ class Dispatcher(object):
     renderer = getattr(request, 'override_renderer', None)
     if renderer is not None:
       return render_to_response(renderer, response, request, package)
-    pc   = getattr(handler, '__pyramid_controllers__', adict())
+    pc   = getattr(handler, self.PCATTR, adict())
     spec = self._select(request, response, controller, handler, dectype,
                         remainder, getattr(pc, dectype, []))
     if spec is None:

@@ -23,7 +23,13 @@ def reprRendererFactory(info):
   return _render
 
 #------------------------------------------------------------------------------
+def xnl(text):
+  return text.replace('><', '>\n<')
+
+#------------------------------------------------------------------------------
 class TestHelper(unittest.TestCase):
+
+  maxDiff = None
 
   def setUp(self):
     self.renderers = dict(repr=reprRendererFactory)
@@ -70,10 +76,15 @@ class TestHelper(unittest.TestCase):
       }
     return view(self.request)
 
-  def assertResponse(self, res, status, body=None):
+  def assertResponse(self, res, status, body=None, location=None, xml=False):
     self.assertEqual(res.status_code, status)
     if body is not None:
-      self.assertEqual(res.body, body)
+      if xml:
+        self.assertMultiLineEqual(xnl(res.body), xnl(body))
+      else:
+        self.assertMultiLineEqual(res.body, body)
+    if location is not None:
+      self.assertEqual(res.headers['Location'], location)
 
 #------------------------------------------------------------------------------
 # end of $Id$

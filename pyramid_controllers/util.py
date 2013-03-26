@@ -7,6 +7,10 @@
 # copy: (C) Copyright 2013 Cadit Inc., see LICENSE.txt
 #------------------------------------------------------------------------------
 
+import sys, pkg_resources
+
+PY3 = sys.version_info[0] == 3
+
 #------------------------------------------------------------------------------
 class adict(dict):
   def __getattr__(self, key):
@@ -19,6 +23,7 @@ class adict(dict):
       del self[key]
     return self
   def update(self, *args, **kw):
+    args = [e for e in args if e]
     dict.update(self, *args, **kw)
     return self
   @staticmethod
@@ -37,11 +42,38 @@ class adict(dict):
     return ret
 
 #------------------------------------------------------------------------------
+def pick(source, *args):
+  ret = adict()
+  for arg in args:
+    if arg in source:
+      ret[arg] = source[arg]
+  return ret
+
+#------------------------------------------------------------------------------
 def getMethod(request):
   name = request.params.get('_method', '').strip()
   if len(name) > 0:
     return name.upper()
   return request.method
+
+#------------------------------------------------------------------------------
+def getVersion(package='pyramid_controllers', default='unknown'):
+  try:
+    return pkg_resources.require(package)[0].version
+  except:
+    return default
+
+#------------------------------------------------------------------------------
+if PY3:
+  def isstr(obj):
+    return isinstance(obj, str)
+else:
+  def isstr(obj):
+    return isinstance(obj, basestring)
+
+#------------------------------------------------------------------------------
+def isiter(obj):
+  return hasattr(obj, '__iter__') and not isstr(obj)
 
 #------------------------------------------------------------------------------
 # end of $Id$

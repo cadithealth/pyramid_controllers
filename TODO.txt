@@ -65,3 +65,7 @@
 - implement a method name transformation logic. eg. if a request comes
   in for "such & such", then look up "such_and_such"... ok, that might
   be a bit too much, but perhaps something like 'such___such'?
+
+- make `DescriberController.formattext_html` try to load docutils, and
+  if successful, do rST formatting with that. otherwise fallback to the
+  pseudo-stuff...

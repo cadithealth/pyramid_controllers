@@ -23,7 +23,7 @@ from pyramid_controllers import \
     includeme, \
     Controller, RestController, DescribeController, Dispatcher, \
     expose, index, lookup, default, fiddle
-from .util import adict
+from .util import adict, getVersion
 from .test_helpers import TestHelper
 
 # make the XML namespace output a bit easier to grok...
@@ -95,6 +95,14 @@ minRst = adict(format='rst', showSelf=False, showLegend=False,
 
 #------------------------------------------------------------------------------
 class TestDescribeController(TestHelper):
+
+  #----------------------------------------------------------------------------
+  def test_version(self):
+    v = getVersion()
+    if v == 'unknown':
+      # todo: this shouldn't really ever happen...
+      return
+    self.assertRegexpMatches(v, '^\d+(\.\d+)*$')
 
   #----------------------------------------------------------------------------
   def test_format_txt(self):
@@ -198,7 +206,7 @@ class TestDescribeController(TestHelper):
 
 # Legend
 
-  * `{NAME}`:
+  * `{{NAME}}`:
 
     Placeholder -- usually replaced with an ID or other identifier of a RESTful
     object.
@@ -224,9 +232,9 @@ class TestDescribeController(TestHelper):
     path arguments dynamically, so no further information can be determined
     without specific contextual request details.
 
-.. generator: pyramid_controllers/0.1 [format=rst]
+.. generator: pyramid-controllers/{version} [format=rst]
 .. location: http://localhost/desc
-''')
+'''.format(version=getVersion()))
 
   #----------------------------------------------------------------------------
   def test_prune_index(self):
@@ -275,11 +283,11 @@ class TestDescribeController(TestHelper):
  <head>
   <title>Contents of "/"</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
-  <meta name="generator" content="pyramid_controllers/0.1"/>
+  <meta name="generator" content="pyramid-controllers/{version}"/>
   <style type="text/css">
-   dl{margin-left: 2em;}
-   dt{font-weight: bold;}
-   dd{margin:0.5em 0 0.75em 2em;}
+   dl{{margin-left: 2em;}}
+   dt{{font-weight: bold;}}
+   dd{{margin:0.5em 0 0.75em 2em;}}
   </style>
  </head>
  <body>
@@ -360,7 +368,7 @@ class TestDescribeController(TestHelper):
   </dl>
   <h3>Legend</h3>
   <dl>
-   <dt>{NAME}</dt>
+   <dt>{{NAME}}</dt>
    <dd>
     <p>Placeholder -- usually replaced with an ID or other identifier of a RESTful object.</p>
    </dd>
@@ -383,7 +391,8 @@ class TestDescribeController(TestHelper):
   </dl>
  </body>
 </html>
-'''
+'''.format(version=getVersion())
+
     chk = re.sub('>\s*<', '><', chk, flags=re.MULTILINE)
     res.body = re.sub('>\s*<', '><', res.body, flags=re.MULTILINE)
     self.assertResponse(res, 200, chk, xml=True)

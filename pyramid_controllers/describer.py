@@ -616,7 +616,7 @@ class DescribeController(Controller):
         ret += normLines(self.formattext_rst(options, desc, options.width - 4), indent=4)
         ret += '\n\n'
     if options.showGenerator:
-      ret += '.. generator: pyramid_controllers'
+      ret += '.. generator: pyramid-controllers'
       if options.showGenVersion:
         ret += '/{}'.format(getVersion())
       ret += ' [format=rst]\n'
@@ -705,7 +705,7 @@ class DescribeController(Controller):
  <head>
   <title>Contents of "{path}"</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
-  <meta name="generator" content="pyramid_controllers/{version}"/>
+  <meta name="generator" content="pyramid-controllers/{version}"/>
   <style type="text/css">
    dl{{margin-left: 2em;}}
    dt{{font-weight: bold;}}

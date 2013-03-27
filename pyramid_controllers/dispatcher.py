@@ -17,7 +17,7 @@ algorithm of the controller-based request dispatch mechanism.
 #       an @default receives ``None`` as the current path element
 #       being requested instead of ''... is that what it should be?...
 
-import os.path, types, re, inspect
+import os.path, types, re, inspect, urllib
 from pyramid.exceptions import ConfigurationError
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException, WSGIHTTPException
@@ -56,6 +56,33 @@ class Dispatcher(object):
 
   #----------------------------------------------------------------------------
   def __init__(self, defaultForceSlash=True, autoDecorate=True, *args, **kw):
+    '''
+    Creates a new Dispatcher for controller hierarchy traversal and
+    request dispatching. Accepts the following parameters:
+
+    :param defaultForceSlash:
+
+      Set the default value of @index's `forceSlash` parameter, which
+      defaults to ``True``, i.e. index requests that do not have a
+      trailing slash (``/``) will receive a 302 redirect with the
+      slash appended.
+
+    :param autoDecorate:
+
+      Primarily for internal purposes -- when set to truthy (the
+      default), the result of doing a controller exposure instance
+      inspection will be cached as an attribute on the controller
+      (named the value of ``self.PCATTR``).
+
+    Note: the standard dispatcher assumes that URL-encoded client
+    paths will remain URL-encoded until they get to the Dispatcher.
+    At that point the URL is split at slashes ('/'), and each
+    component is then URL-decoded (but no further interpretation is
+    done). The default Apache configuration violates this assumption
+    -- to correct that, you can use the following Apache directive::
+
+      AllowEncodedSlashes NoDecode
+    '''
     super(Dispatcher, self).__init__(*args, **kw)
     self.defaultForceSlash = defaultForceSlash
     self.autoDecorate      = autoDecorate
@@ -268,14 +295,6 @@ class Dispatcher(object):
   #----------------------------------------------------------------------------
   def dispatch(self, request, controller):
     try:
-      # TODO: it appears that pyramid does a pre-escape of the entire string
-      #       before making it available in matchdict. ugh. that means that
-      #       this will not be handled as it should:
-      #          /this/and%2for/that
-      #       since the controller lookup tree will be:
-      #          this => and => or => that
-      #       instead of
-      #          this => and/or => that
       # normalize the path
       opath = request.matchdict['pyramid_controllers_path']
       # prefixing with '///' so that leading '..' get dropped (the reason
@@ -287,7 +306,9 @@ class Dispatcher(object):
         path += '/'
       # strip leading '/'
       path = path[1:]
-      return self.walk(request, controller, path.split('/'))
+      # split at '/' and url-decode each component
+      path = [urllib.unquote(e) for e in path.split('/')]
+      return self.walk(request, controller, path)
     except (HTTPException, WSGIHTTPException, Response), exc:
       return exc
 

@@ -45,7 +45,11 @@ def add_controller(self,
 
     [optional] overrides the default dispatcher routine. If not
     specified, a default :class:`pyramid_controllers.Dispatcher` will
-    be used.
+    be used (with all default options, including `defaultForceSlash`
+    enabled).
+
+  Any additional keyword parameters will be passed through to the
+  `config.add_route()` call.
 
   '''
 

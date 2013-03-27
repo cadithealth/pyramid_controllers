@@ -69,3 +69,7 @@
 - make `DescriberController.formattext_html` try to load docutils, and
   if successful, do rST formatting with that. otherwise fallback to the
   pseudo-stuff...
+
+- update the documentations!
+    => simplify
+    => get it to render correctly on pypi

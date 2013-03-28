@@ -14,10 +14,6 @@ try:
   README = open(os.path.join(here, 'README.txt')).read()
 except IOError:
   README = ''
-try:
-  VERSION = open(os.path.join(here, 'VERSION.txt')).read()
-except IOError:
-  VERSION = 'unknown'
 
 # require python 2.7+
 assert(sys.version_info[0] > 2
@@ -39,7 +35,7 @@ requires = [
 
 setup(
   name                  = 'pyramid_controllers',
-  version               = VERSION,
+  version               = '0.3',
   description           = 'A pyramid plugin that provides de-centralized hierarchical object dispatch.',
   long_description      = README,
   classifiers           = [

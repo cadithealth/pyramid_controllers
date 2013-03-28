@@ -14,6 +14,11 @@ controller hierarchy in either as plain-text tree, reStructuredText,
 HTML, WADL, YAML, or XML descriptor file.
 '''
 
+# TODO: the Entry.isLeaf is not a useful concept, as it implies that
+#       a node is either a leaf or a branch, but controllers can be both...
+#       (due to the @index decorator). so, move to something like
+#       Entry.isHandler methinks...
+
 import os, types, re, textwrap, inspect, cgi, json
 import xml.etree.ElementTree as ET
 from pyramid.response import Response
@@ -287,9 +292,14 @@ class DescribeController(Controller):
     for name, default in (
       ('maxdepth',       1024),
       ('width',          79),
+      ('maxDocColumn',   None),
+      ('minDocLength',   20),
       ):
       try:
-        options[name] = int(cur_options.get(name, default))
+        if name in cur_options:
+          options[name] = int(cur_options.get(name))
+        else:
+          options[name] = default
       except (ValueError, TypeError):
         options[name] = default
     options.dispatcher = getDispatcherFromStack() or Dispatcher(autoDecorate=False)
@@ -301,18 +311,16 @@ class DescribeController(Controller):
   def _walkEntries(self, options, entry=None):
     # todo: what about detecting circular references?...
     for ent in self._listAllEntries(options, entry):
-      ent = self.filterEntry(options, ent)
-      if not ent:
-        continue
-      if ent.isLeaf or options.showBranches:
+      fent = self.filterEntry(options, ent)
+      if fent and ( ent.isLeaf or options.showBranches ):
         yield ent
       # todo: this maxdepth application is inefficient...
       if options.maxdepth is not None \
           and len(list(ent.parents)) >= options.maxdepth:
         continue
       for subent in self._walkEntries(options, ent):
-        subent = self.filterEntry(options, subent)
-        if subent.isLeaf or options.showBranches:
+        fsubent = self.filterEntry(options, subent)
+        if fsubent and ( subent.isLeaf or options.showBranches ):
           yield subent
 
   #----------------------------------------------------------------------------
@@ -394,7 +402,7 @@ class DescribeController(Controller):
       for include in self.include:
         if include.match(entry.path):
           match = True
-          continue
+          break
       if not match:
         return None
     if self.exclude:
@@ -417,14 +425,14 @@ class DescribeController(Controller):
 
     Sub-classes may override & extend this functionality - noting that
     the returned object can either be the original decorated `entry`
-    or ``None``. In the latter case, the entry will be removed from
-    the output.
+    or a new one, in which case it will take the place of the passed-in
+    entry.
 
     Although DescribeController does not extract or otherwise
     determine any attributes beyond the above specified attributes,
     there are additional attributes that some of the formatters will
     take advantage of. For this reason, sub-classes are encouraged to
-    further decorate the entries where possible with the follow
+    further decorate the entries where possible with the following
     attributes:
 
     * `params`: a list of objects that represent parameters that this
@@ -492,13 +500,8 @@ class DescribeController(Controller):
     return entry
 
   #----------------------------------------------------------------------------
-  @property
-  def override_txt(self):
-    return adict(showBranches=True)
-
-  #----------------------------------------------------------------------------
-  def formattext_txt(self, options, text, width):
-    return textwrap.fill(text, width=width)
+  def formattext_txt(self, options, text, width=None):
+    return textwrap.fill(text, width=width or options.width)
 
   #----------------------------------------------------------------------------
   def formatdoc_txt(self, options, entry, width):
@@ -520,43 +523,78 @@ class DescribeController(Controller):
     Formats the DescribeController output as a plain-text tree
     hierarchy.
     '''
-    ret = ''
     # TODO: handle entries with the same name... (ie. multi-condition aliasing)
-    #         => this has ramifications on `entry.isLast`...
-    # decorate entries with 'isLast' attribute...
+    #         => this has ramifications on `entry._dlast`...
+    ret = []
+    # in order to show the tree nicely, i need to re-insert all branch
+    # entries into the entry stream, but they're documentation should not
+    # be shown... thus 
     entries = list(entries)
+    fullset = []
+    last = None
+    for entry in entries:
+      entry._dtext = True
+      if entry.parent and entry.parent not in fullset:
+        toadd = []
+        for parent in entry.parents:
+          if parent not in fullset:
+            toadd.append(parent)
+            continue
+          break
+        fullset.extend(reversed(toadd))
+      last = entry
+      fullset.append(last)
+    entries = fullset
+    # decorate entries with '_dlast' attribute...
     for entry in entries:
       if entry.parent:
-        if entry.parent.children is None:
-          entry.parent.children = []
-        entry.parent.children.append(entry)
+        if entry.parent._dchildren is None:
+          entry.parent._dchildren = []
+        entry.parent._dchildren.append(entry)
     for entry in entries:
-      if entry.children:
-        entry.children[-1].isLast = True
-    # now show the hierarchy
+      if entry._dchildren:
+        entry._dchildren[-1]._dlast = True
+    # generate the hierarchy
     for entry in entries:
+      cur = ''
       indent = ''
       rparents = list(entry.rparents)
       for c in rparents[1:]:
-        indent += '    ' if c.isLast else '|   '
+        indent += '    ' if c._dlast else '|   '
       if len(rparents) > 0:
-        ret += indent + ( '`-- ' if entry.isLast else '|-- ' )
-        indent += '    ' if entry.isLast else '|   '
+        cur += indent + ( '`-- ' if entry._dlast else '|-- ' )
+        indent += '    ' if entry._dlast else '|   '
       else:
-        ret += indent + self.path
-      ret += entry.dname
-      if not entry.isLeaf and not ret.endswith('/'):
-        ret += '/'
-      # todo: if options.showInfo and entry.doc, then there should be
-      #       something that scans through all the entries, determines
-      #       max path width, and then puts a '#' column of truncated
-      #       descriptions, e.g.::
-      #         /                 # Root controller.
-      #         |-- desc          # Describes a pyramid-controller's path hierarchy in sever...
-      #         `-- sub/          # A sub-controller.
-      #             `-- method    # This method outputs a JSON list.
-      ret += '\n'
-    resp = Response(ret, content_type='text/plain')
+        cur += indent + self.path
+      cur += entry.dname
+      if not entry.isLeaf and not cur.endswith('/'):
+        cur += '/'
+      ret.append(cur)
+    # add the documentation
+    # note: this length check (entries vs ret) is currently redundant
+    # (they will always be the same... but just in case someone
+    # changes the code above without realizing this dependency
+    # here...)
+    if options.showInfo and len(entries) == len(ret):
+      tlen = max([len(e) for e in ret]) + 3
+      if options.maxDocColumn and tlen > options.maxDocColumn:
+        tlen = options.maxDocColumn
+      # the minus three here is to account for the addition of " # "
+      # in the text formatting.
+      dlen = options.width - tlen - 3
+      if options.minDocLength and dlen < options.minDocLength:
+        dlen = options.minDocLength
+      # force an absolute minimum of 3 characters...
+      if dlen >= 3:
+        for idx, entry in enumerate(entries):
+          if not entry.doc or not entry._dtext:
+            continue
+          doc = self.formattext_txt(options, entry.doc, options.width)
+          doc = doc.strip().replace('\n', ' ')
+          if len(doc) > dlen:
+            doc = doc[:dlen - 3] + '...'
+          ret[idx] = u'{l: <{w}} # {d}'.format(l=ret[idx], w=tlen, d=doc)
+    resp = Response('\n'.join(ret) + '\n', content_type='text/plain')
     resp.charset = 'UTF-8'
     return resp
 

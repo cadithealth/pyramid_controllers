@@ -111,16 +111,29 @@ class TestDescribeController(TestHelper):
     root.desc = DescribeController(root, doc='URL tree description.')
     self.assertResponse(self.send(root, '/desc'), 200, '''\
 /
-|-- desc
-|-- rest
-|   |-- <DELETE>
-|   |-- <GET>
-|   |-- <POST>
-|   `-- <PUT>
+|-- desc            # URL tree description.
+|-- rest            # A RESTful entry.
+|   |-- <DELETE>    # Deletes the entry.
+|   |-- <GET>       # Gets the current value.
+|   |-- <POST>      # Creates a new entry.
+|   `-- <PUT>       # Updates the value.
 |-- sub/
-|   `-- method
-|-- swi
-`-- ¿unknown?
+|   `-- method      # This method outputs a JSON list.
+|-- swi             # A sub-controller providing only an index.
+`-- ¿unknown?       # A dynamically generated sub-controller.
+''')
+
+  #----------------------------------------------------------------------------
+  def test_include(self):
+    'Setting the Describer `include` parameter is exclusive'
+    root = SimpleRoot()
+    root.desc = DescribeController(root, doc='URL tree description.',
+                                   include='^/sub/method$'
+                                   )
+    self.assertResponse(self.send(root, '/desc'), 200, '''\
+/
+`-- sub/
+    `-- method    # This method outputs a JSON list.
 ''')
 
 #   # TODO: enable this when showInfo is supported for txt...

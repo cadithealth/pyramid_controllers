@@ -575,7 +575,7 @@ class DescribeController(Controller):
     # (they will always be the same... but just in case someone
     # changes the code above without realizing this dependency
     # here...)
-    if options.showInfo and len(entries) == len(ret):
+    if options.showInfo and len(entries) == len(ret) and len(ret) > 0:
       tlen = max([len(e) for e in ret]) + 3
       if options.maxDocColumn and tlen > options.maxDocColumn:
         tlen = options.maxDocColumn

@@ -604,8 +604,20 @@ class DescribeController(Controller):
     ret = []
     # in order to show the tree nicely, i need to re-insert all branch
     # entries into the entry stream, but they're documentation should not
-    # be shown... thus 
-    entries = list(entries)
+    # be shown... thus marking all current entries with '_dtext'. also
+    # re-sorting by name unless RESTful - this is so that RESTful methods
+    # show up first (since they technically don't exist in the URL path).
+    def entcmp(e1, e2):
+      if e1.parent is not e2.parent:
+        return cmp(e1.path, e2.path)
+      r1 = bool(e1.isMethod and e1.isRest)
+      r2 = bool(e2.isMethod and e2.isRest)
+      if r1 == r2:
+        return cmp(e1.name, e2.name)
+      if r1:
+        return -1
+      return 1
+    entries = sorted(list(entries), cmp=entcmp)
     fullset = []
     last = None
     for entry in entries:

@@ -181,9 +181,9 @@ class TestDescribeController(TestHelper):
 /
 |-- desc          # URL tree description.
 `-- rest/         # RESTful access, with sub-component
+    |-- <PUT>     # Modify this object
     |-- access    # Access control
-    |-- groups    # Return the groups for this object
-    `-- <PUT>     # Modify this object
+    `-- groups    # Return the groups for this object
 ''')
 
   #----------------------------------------------------------------------------

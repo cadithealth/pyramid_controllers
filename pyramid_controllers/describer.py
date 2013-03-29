@@ -191,6 +191,10 @@ class DescribeController(Controller):
      ' without specific contextual request details.'),
     )
 
+  decorateFormatIndirect   = '{{{}}}'
+  decorateFormatUndefined  = u'¿{}?'
+  decorateFormatRestMethod = '<{}>'
+
   #----------------------------------------------------------------------------
   def __init__(self, root,
                formats=('txt', 'rst', 'html', 'json', 'wadl', 'yaml', 'xml'),
@@ -547,11 +551,11 @@ class DescribeController(Controller):
 
     # determine the "decorated" path
     if entry.isIndirect:
-      entry.dname = '{{{}}}'.format(entry.name)
+      entry.dname = self.decorateFormatIndirect.format(entry.name)
     elif entry.isUndef:
-      entry.dname = u'¿{}?'.format(entry.name)
+      entry.dname = self.decorateFormatUndefined.format(entry.name)
     elif entry.isRest and entry.itype == 'method':
-      entry.dname = '<{}>'.format(entry.method)
+      entry.dname = self.decorateFormatRestMethod.format(entry.method)
     else:
       entry.dname = entry.name
 

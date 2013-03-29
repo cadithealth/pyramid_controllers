@@ -1,4 +1,5 @@
-# pyramid_controllers
+pyramid_controllers
+===================
 
 The ``pyramid_controllers`` package is a pyramid plugin that provides
 de-centralized hierarchical object dispatch, similar to how the
@@ -9,7 +10,8 @@ responses. There is nothing in pyramid_controllers that forbids the
 use of, or even makes it difficult to use, templating engines. In
 fact, this is encouraged but for simplicity has been omitted here.
 
-## Installation
+Installation
+------------
 
 You can manually install it by running ``pip install
 pyramid_controllers``. However, a better approach is to use standard
@@ -17,7 +19,8 @@ python distribution utilities, and add pyramid_controllers as a
 dependency in your project's `install_requires` parameter in your
 ``setup.py``. Then run a ``python setup.py develop``.
 
-## Usage
+Usage
+-----
 
 First, enable the package either in your INI file via:
 
@@ -53,7 +56,8 @@ def main(global_config, **settings):
 will allow the class ``.controllers.RootController`` to handle any request
 for the URL ``/root`` or URLs that start with ``/root/...``.
 
-## Concept
+Concept
+-------
 
 The basic gist of pyramid_controllers is that for any incoming URL, it
 will be split into components based on forwarded slashes ("/") and
@@ -99,7 +103,8 @@ in standard pyramid fashion.
 TODO: add documentation about the various supported response and
 exception types.
 
-## Controllers
+Controllers
+-----------
 
 There exist two classes that can be subclassed to produce controller
 classes:
@@ -139,7 +144,8 @@ class ReflectController(RestController):
     return 'Hey! This is not the CIA, you cannot just DELETE me!'
 ```
 
-## Decorators
+Decorators
+----------
 
 There are several decorators provided by the pyramid_controllers
 package that influence how a request is handled, as follows:
@@ -176,7 +182,8 @@ package that influence how a request is handled, as follows:
   **NOT** be expected to actually respond to a request via standard
   methods.
 
-## Complex Example
+Complex Example
+---------------
 
 ``` python
 

@@ -35,7 +35,7 @@ requires = [
 
 setup(
   name                  = 'pyramid_controllers',
-  version               = '0.3.3',
+  version               = '0.3.4',
   description           = 'A pyramid plugin that provides de-centralized hierarchical object dispatch.',
   long_description      = README,
   classifiers           = [

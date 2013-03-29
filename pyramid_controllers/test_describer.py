@@ -109,7 +109,7 @@ class TestDescribeController(TestHelper):
   def test_format_txt(self):
     'The Describer can emit a plain-text hierarchy'
     root = SimpleRoot()
-    root.desc = DescribeController(root, doc='URL tree description.')
+    root.desc = DescribeController(root, doc='URL \t  tree\n    description.')
     self.assertResponse(self.send(root, '/desc'), 200, '''\
 /                   # The default root.
 |-- desc            # URL tree description.

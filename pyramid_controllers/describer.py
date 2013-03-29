@@ -688,7 +688,7 @@ class DescribeController(Controller):
           if not entry.doc or not entry._dtext:
             continue
           doc = self.formattext_txt(options, entry.doc, options.width)
-          doc = doc.strip().replace('\n', ' ')
+          doc = re.sub(r'\s+', ' ', doc).strip()
           if len(doc) > dlen:
             doc = doc[:dlen - 3] + '...'
           ret[idx] = u'{l: <{w}} # {d}'.format(l=ret[idx], w=tlen, d=doc)

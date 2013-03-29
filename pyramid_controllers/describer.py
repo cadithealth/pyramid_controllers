@@ -33,6 +33,61 @@ HTTP_METHODS_NORM = [meth2action(v) for v in HTTP_METHODS]
 
 #------------------------------------------------------------------------------
 class Entry(adict):
+  '''
+  Represents an entry in the controller hierarchy. Entries can have
+  the following attributes:
+
+    name
+      The name of the entry, relative to the parent entry.
+    parent
+      A reference to the parent entry.
+    controller
+      If defined, a reference to the Controller instance that
+      this entry represents.
+    handler
+      If defined, a reference to the method or class that
+      this entry represents.
+    method
+      The name of the HTTP method for RESTful verb entries.
+    isMethod
+      True IFF the parent is a RestController and this is
+      a RESTful verb handler.
+    isHandler
+      True IFF it is an endpoint that is capable of handling
+      requests. this is always true if `handler` is defined,
+      but not necessarily the case if `controller` is defined.
+      the latter is only the case IFF an @index has been defined
+      for the controller.
+    isLeaf
+      True IFF there are no URL entries beyond this point.
+    isIndirect
+      True IFF the dispatcher will not send requests directly
+      at this controller - typically that means it must be
+      returned via a @lookup method.
+    isRest
+      True IFF the `controller` is an instance of RestController.
+    isUndef
+      True IFF the `handler` is not an inspectable class (i.e.
+      it is not an instantiated method)
+    parents
+      A generator of entry parents, starting with the closest first.
+    rparents
+      A reversed version of `parents`, ie. starting at the root first.
+
+  An entry can have many more attributes however, including the
+  following which are added by the default implementation of
+  :meth:`Dispatcher.decorateEntry()`:
+
+    doc
+      The documentation for this entry.
+    path
+      The full path to this entry.
+    dname
+      The "decorated" version of `name`.
+    dpath
+      The "decorated" version of `path`.
+
+  '''
   @property
   def parents(self):
     entry = self
@@ -312,7 +367,7 @@ class DescribeController(Controller):
     # todo: what about detecting circular references?...
     for ent in self._listAllEntries(options, entry):
       fent = self.filterEntry(options, ent)
-      if fent and ( ent.isLeaf or options.showBranches ):
+      if fent and ( ent.isHandler or options.showBranches ):
         yield ent
       # todo: this maxdepth application is inefficient...
       if options.maxdepth is not None \
@@ -320,7 +375,7 @@ class DescribeController(Controller):
         continue
       for subent in self._walkEntries(options, ent):
         fsubent = self.filterEntry(options, subent)
-        if fsubent and ( subent.isLeaf or options.showBranches ):
+        if fsubent and ( subent.isHandler or options.showBranches ):
           yield subent
 
   #----------------------------------------------------------------------------
@@ -355,18 +410,27 @@ class DescribeController(Controller):
   #----------------------------------------------------------------------------
   def controller2entry(self, options, name, controller, parent):
     'Creates a Describer `entry` object for the specified Controller instance.'
-    ret = Entry(name=name, controller=controller, parent=parent)
-    ret.isIndirect = not controller._pyramid_controllers.expose
-    ret.isRest     = isinstance(controller, RestController)
-    ret.isLeaf     = True
+    ret = Entry(name       = name,
+                parent     = parent,
+                controller = controller,
+                isHandler  = True,
+                isLeaf     = True,
+                isIndirect = not controller._pyramid_controllers.expose,
+                isRest     = isinstance(controller, RestController),
+                )
     ret = self.decorateEntry(options, ret)
     for entry in self._listAllEntries(adict(options).update(showRest=True), ret):
-      if ret.isRest and entry.isRest:
+      if ret.isRest and entry.isMethod:
         if ret.methods is None:
           ret.methods = []
         ret.methods.append(entry)
         continue
       ret.isLeaf = False
+    if ret.isRest:
+      ret.isHandler = True
+    else:
+      meta = options.dispatcher.getCachedMeta(controller)
+      ret.isHandler = bool(meta.index)
     return ret
 
   #----------------------------------------------------------------------------
@@ -374,19 +438,31 @@ class DescribeController(Controller):
     'Converts an uninstantiated class to an entry.'
     if not options.showDynamic:
       return None
-    ret = Entry(isLeaf=True, name=name, isUndef=True, handler=klass, parent=parent)
+    ret = Entry(name       = name,
+                parent     = parent,
+                handler    = klass,
+                isHandler  = True,
+                isLeaf     = True,
+                isUndef    = True,
+                )
     return self.decorateEntry(options, ret)
 
   #----------------------------------------------------------------------------
   def method2entry(self, options, name, method, parent):
     'Converts an object method to an entry.'
-    ret = Entry(isLeaf=True, name=name, handler=method, parent=parent)
+    ret = Entry(name       = name,
+                parent     = parent,
+                handler    = method,
+                isHandler  = True,
+                isLeaf     = True,
+                )
     if parent and isinstance(parent.controller, RestController) \
         and name in options.restVerbs:
       if not options.showRest:
         return None
-      ret.method = action2meth(name)
-      ret.isRest = True
+      ret.method   = action2meth(name)
+      ret.isRest   = True
+      ret.isMethod = True
     return self.decorateEntry(options, ret)
 
   #----------------------------------------------------------------------------
@@ -628,7 +704,6 @@ class DescribeController(Controller):
       if not entry.isLeaf:
         if not ret.endswith('/'):
           ret += '/'
-        ret += ' (container)'
       ret += ':\n\n'
       if options.showImpl and entry.ipath:
         ipath = entry.ipath

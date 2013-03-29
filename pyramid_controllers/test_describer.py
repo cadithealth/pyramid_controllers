@@ -65,6 +65,7 @@ class Sub(Controller):
 class Unknown(Controller):
   'A dynamically generated sub-controller.'
 class SimpleRoot(Controller):
+  'A SimpleRoot controller (docs should come from index).'
   @index
   def index(self, request):
     'The default root.'
@@ -110,7 +111,7 @@ class TestDescribeController(TestHelper):
     root = SimpleRoot()
     root.desc = DescribeController(root, doc='URL tree description.')
     self.assertResponse(self.send(root, '/desc'), 200, '''\
-/
+/                   # The default root.
 |-- desc            # URL tree description.
 |-- rest            # A RESTful entry.
 |   |-- <DELETE>    # Deletes the entry.
@@ -136,19 +137,99 @@ class TestDescribeController(TestHelper):
     `-- method    # This method outputs a JSON list.
 ''')
 
-#   # TODO: enable this when showInfo is supported for txt...
-#   #----------------------------------------------------------------------------
-#   def test_format_txt_with_info(self):
-#     'The Describer can emit a hierarchy with comments'
-#     root = SimpleRoot()
-#     root.desc = DescribeController(root, doc='URL tree description.')
-#     self.assertResponse(self.send(root, '/desc', {'showInfo': '1'}), 200, '''\
-# /                 # Root controller.
-# |-- desc          # Describes a pyramid-controller's path hierarchy in sever...
-# |-- sub/          # A sub-controller.
-# |   `-- method    # This method outputs a JSON list.
-# `-- swi           # A sub-controller providing only an index.
-# ''')
+  #----------------------------------------------------------------------------
+  def test_exclude(self):
+    'Setting the Describer `exclude` parameter is inclusive'
+    root = SimpleRoot()
+    root.desc = DescribeController(root, doc='URL tree description.',
+                                   exclude='^/sub/method$'
+                                   )
+    self.assertResponse(self.send(root, '/desc'), 200, '''\
+/                   # The default root.
+|-- desc            # URL tree description.
+|-- rest            # A RESTful entry.
+|   |-- <DELETE>    # Deletes the entry.
+|   |-- <GET>       # Gets the current value.
+|   |-- <POST>      # Creates a new entry.
+|   `-- <PUT>       # Updates the value.
+|-- swi             # A sub-controller providing only an index.
+`-- ¿unknown?       # A dynamically generated sub-controller.
+''')
+
+  #----------------------------------------------------------------------------
+  def test_mixed_restful_and_dispatch_txt(self):
+    'The Describer supports mixing RESTful and URL component methods'
+    class Access(Controller):
+      @index
+      def index(self, request):
+        'Access control'
+    class Rest(RestController):
+      'RESTful access, with sub-component'
+      access = Access()
+      @expose
+      def put(self, request):
+        'Modify this object'
+        pass
+      @expose
+      def groups(self, request):
+        'Return the groups for this object'
+    class Root(Controller):
+      rest = Rest()
+    root = Root()
+    root.desc = DescribeController(root, doc='URL tree description.')
+    self.assertResponse(self.send(root, '/desc'), 200, '''\
+/
+|-- desc          # URL tree description.
+`-- rest/         # RESTful access, with sub-component
+    |-- access    # Access control
+    |-- groups    # Return the groups for this object
+    `-- <PUT>     # Modify this object
+''')
+
+  #----------------------------------------------------------------------------
+  def test_mixed_restful_and_dispatch_rst(self):
+    'The Describer supports mixing RESTful and URL component methods'
+    class Access(Controller):
+      @index
+      def index(self, request):
+        'Access control'
+    class Rest(RestController):
+      'RESTful access, with sub-component'
+      access = Access()
+      @expose
+      def put(self, request):
+        'Modify this object'
+        pass
+      @expose
+      def groups(self, request):
+        'Return the groups for this object'
+    class Root(Controller):
+      rest = Rest()
+    root = Root()
+    root.desc = DescribeController(root, doc='URL tree description.',
+                                   override=minRst)
+    self.assertResponse(self.send(root, '/desc'), 200, '''\
+# Contents of "/"
+
+## /rest/:
+
+  RESTful access, with sub-component
+
+  ### Supported Methods
+
+  * **PUT**:
+
+    Modify this object
+
+## /rest/access:
+
+  Access control
+
+## /rest/groups:
+
+  Return the groups for this object
+
+''')
 
 #   # TODO: enable this when txt is sensitive to forceSlash...
 #   #----------------------------------------------------------------------------
@@ -178,6 +259,10 @@ class TestDescribeController(TestHelper):
     root.desc = DescribeController(root, doc='URL tree description.',
                                    override=adict(format='rst'))
     self.assertResponse(self.send(root, '/desc'), 200, '''# Contents of "/"
+
+## /:
+
+  The default root.
 
 ## /desc:
 
@@ -306,6 +391,10 @@ class TestDescribeController(TestHelper):
  <body>
   <h1>Contents of "/"</h1>
   <dl class="endpoints">
+   <dt>/</dt>
+   <dd>
+    <p>The default root.</p>
+   </dd>
    <dt>/desc</dt>
    <dd>
     <p>URL tree description.</p>
@@ -421,6 +510,10 @@ class TestDescribeController(TestHelper):
 <?xml version="1.0" encoding="UTF-8"?>
 <application url="http://localhost">
  <endpoints>
+  <endpoint name="" path="/" decorated-name="" decorated-path="/">
+   <doc>The default root.</doc>
+   <method name="GET"/>
+  </endpoint>
   <endpoint name="desc" path="/desc" decorated-name="desc" decorated-path="/desc">
    <doc>URL tree description.</doc>
    <method name="GET"/>
@@ -466,6 +559,11 @@ class TestDescribeController(TestHelper):
 application:
   url: 'http://localhost'
   endpoints:
+    - name: ''
+      path: /
+      decoratedName: ''
+      decoratedPath: /
+      doc: The default root.
     - name: desc
       path: /desc
       decoratedName: desc
@@ -559,7 +657,6 @@ application:
       decoratedPath: /describe
       doc: "A multi-line\\ncomment."
 '''
-    
     self.assertEqual(yaml.load(res.body), yaml.load(chk))
 
   #----------------------------------------------------------------------------
@@ -573,6 +670,12 @@ application:
   "application": {
     "url": "http://localhost",
     "endpoints": [
+      { "name": "",
+        "path": "/",
+        "decoratedName": "",
+        "decoratedPath": "/",
+        "doc": "The default root."
+      },
       { "name": "desc",
         "path": "/desc",
         "decoratedName": "desc",
@@ -682,6 +785,10 @@ application:
  xsi:schemaLocation="http://research.sun.com/wadl/2006/10 wadl.xsd"
  >
  <resources base="http://localhost">
+  <resource path="">
+   <pc:doc>The default root.</pc:doc>
+   <method name="GET"/>
+  </resource>
   <resource path="desc">
    <pc:doc>URL tree description.</pc:doc>
    <method name="GET"/>

@@ -73,3 +73,26 @@
 - update the documentations!
     => simplify
     => get it to render correctly on pypi
+
+- currently the @lookup inspection done by the describer is a little
+  'odd':
+
+    class Foo(Controller):
+      USER_ID = UserController(expose=False)
+      @lookup
+      def lookup(self, request, uid, ...):
+        request.uid = uid
+        return (self.USER_ID, ...)
+
+  it should pull the info directly from the lookup, eg:
+
+    uc = UserController()
+    class Foo(Controller):
+      @lookup
+      def lookup(self, request, USER_ID, ...):
+        request.uid = USER_ID
+        return (uc, ...)
+
+  in both cases, the resulting dpath will be '.../foo/{USER_ID}/...'
+  **** the problem with this is: how does the framework then continue
+  the inspection of UserController?...

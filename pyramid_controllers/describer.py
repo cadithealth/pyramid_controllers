@@ -100,6 +100,12 @@ class Entry(adict):
       for parent in self.parent.rparents:
         yield parent
       yield self.parent
+  def __eq__(self, other):
+    # note: not quite sure exactly why, but the line Dispatcher.format_txt:
+    #         "if entry.parent and entry.parent not in fullset:"
+    #       causes a 'RuntimeError: maximum recursion' error if this
+    #       is not here...
+    return self is other
 
 #------------------------------------------------------------------------------
 def normLines(text, indent=None):

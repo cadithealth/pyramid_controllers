@@ -105,18 +105,188 @@ expose = makeDecorator(ExposeDecorator, doc='''\
       def api(self, request):
         return dict(state='enabled')
 
-      @expose(ext='html', renderer='module:path/to/template')
+      @expose(ext='html', renderer='mymodule:path/to/template.mako')
       @expose(ext=('json', 'js'), renderer='json')
       def resource(self, request):
         return dict(count=12)
 
   ''')
 
-# todo: add documentation for each decorator...
-index   = makeDecorator(IndexDecorator)
-lookup  = makeDecorator(LookupDecorator)
-default = makeDecorator(DefaultDecorator)
-fiddle  = makeDecorator(FiddleDecorator)
+#------------------------------------------------------------------------------
+index = makeDecorator(IndexDecorator, doc='''\
+
+  Decorates a :class:`Controller` method to indicate that it will
+  handle requests that resolve to the controller, but do not have any
+  further path arguments. Accepts the following optional parameters:
+
+  :param forceSlash:
+
+    Boolean that controls whether or not an index request that does
+    not have a trailing slash ("/") should be 302 redirected to a
+    version of the URL with a trailing slash. The default behaviour is
+    controlled by the :class:`pyramid_controllers.Dispatcher` in
+    effect for the current request (which, by default, is set to
+    true).
+
+  :param renderer:
+
+    Specifies the renderer to use.
+
+  Examples::
+
+    class SubController(Controller):
+
+      @index(forceSlash=False)
+      def index(self, request):
+        # responds with a 200 to both '/sub' and '/sub/'
+        return 'sub-index'
+
+    class RootController(Controller):
+
+      sub = SubController()
+
+      @index
+      def index(self, request):
+        return 'index'
+
+  ''')
+
+#------------------------------------------------------------------------------
+default = makeDecorator(DefaultDecorator, doc='''\
+
+  Decorates a :class:`Controller` method to indicate that it will
+  handle requests that the pyramid_controllers framework could not
+  otherwise find an appropriate handler for. Without a default
+  handler, a "404 Not Found" response would be generated. The default
+  handler is passed the standard `request` parameter, and then all of
+  the remaining path components as positional arguments, and is
+  expected to complete the handling of the request - i.e. to generate
+  a response. The ``@default`` decorator accepts the following
+  optional parameters:
+
+  :param renderer:
+
+    Specifies the renderer to use.
+
+  Examples::
+
+    class SubController(Controller):
+
+      @expose
+      def method(self, request): return 'reachable'
+
+      def unreacheable(self, request):
+        return 'not-exposed'
+
+      @default(renderer='mymodule:path/to/template.mako')
+      def default(self, request, current, *rem):
+        if len(rem) > 0:
+          raise HTTPNotFound()
+        return dict(page=current)
+
+    class RootController(Controller):
+
+      sub = SubController()
+
+      @default
+      def default(self, request, *paths):
+        return 'Remaining: ' + ', '.join(paths)
+
+  In this controller configuration, the following requests would be
+  handled as follows:
+
+  * ``/zig/zag``:
+    Response: ``Remaining: zig, zag``.
+
+  * ``/sub/foo``:
+
+    Response: the output from the ``path/to/template.mako`` template
+    with the dictionary ``{'page': 'foo'}`` as template data.
+
+  * ``/sub/foo/bar``:
+
+    Response: "404 Not Found" error.
+
+  Note that ``@lookup`` decorated methods take precedence.
+  ''')
+
+#------------------------------------------------------------------------------
+lookup = makeDecorator(LookupDecorator, doc='''\
+
+  Similar to the ``@default`` decorator, this indicates that the
+  method should be called for any request that did not match standard
+  request dispatching. Unlike the default handler, however, this
+  method is **NOT** expected to handle the request, i.e. it is not
+  intended to return a Response (or equivalent) object. Instead, it is
+  expected to determine the *next* controller to invoke in the process
+  of walking the request URL path components. It should return a tuple
+  of ``(Controller, remainingPaths)``, where `remainingPaths` is a
+  list of path elements that were not consumed (the @lookup method can
+  consume as many elements as needed). The @lookup decorator itself
+  does not currently accept any parameters.
+
+  The lookup handler is typically used for dynamically resolved URL
+  components which identify, usually, an object ID. This is the most
+  common when creating "RESTful" URLs. For example, given the URL
+  pattern ``/resource/RESOURCE_ID/action``, a @lookup handler could be
+  used for the ``RESOURCE_ID`` section. An implementation of this
+  example::
+
+    class ResourceController(Controller):
+
+      @expose
+      def action(self, request):
+        return 'Action taken on object ID "%s".' % (request.res.id,)
+
+    class ResourceDispatcher(Controller):
+
+      RESOURCE_ID = ResourceController(expose=False)
+
+      @lookup
+      def lookup(self, request, res_id, *rem):
+        request.res = get_resource_by_id(res_id)
+        if not request.res:
+          raise HTTPNotFound()
+        return (self.RESOURCE_ID, rem)
+
+    class RootController(Controller):
+
+      resource = ResourceDispatcher()
+
+  In this example, assuming that ``get_resource_by_id`` returns an
+  object by ID, the request for URL ``/resource/15/action`` will
+  receive the response ``Action taken on object ID "15".`` (given that
+  the object with ID "15" exists).
+  ''')
+
+#------------------------------------------------------------------------------
+fiddle = makeDecorator(FiddleDecorator, doc='''\
+
+  The ``@fiddle`` decorator indicates that the decorated
+  :class:`Controller` method should be called before dispatch to any
+  handlers or sub-controllers. This is typically done to implement
+  access control in a custom Controller base class.
+
+  Example::
+
+    class BaseController(Controller):
+
+      @fiddle
+      def fiddle(self, request):
+        require = getattr(self, 'require', None)
+        if require == 'valid-user':
+          if not is_valid_user(request):
+            raise HTTPUnauthorized()
+
+    class MyController(Controller):
+
+      require = 'valid-user'
+
+      @expose
+      def action(self, request):
+        return 'You are a valid user!'
+
+  ''')
 
 #------------------------------------------------------------------------------
 class ExposeDefaultsDecorator(object):

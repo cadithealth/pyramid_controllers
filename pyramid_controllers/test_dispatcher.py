@@ -260,21 +260,51 @@ class TestDispatcher(TestHelper):
       sub = Sub()
     self.assertResponse(self.send(Root(), '/sub/data'), 200, 'ok.sub.data:nsn-fiddled=True')
 
-  # # TODO: this unit test currently fails... re-enable when fixed.
-  # def test_fiddle_with_subclassing(self):
-  #   'Multiple @fiddles coming from both sub-class and super-class should apply'
-  #   class Base(Controller):
-  #     @fiddle
-  #     def basefiddle(self, request):
-  #       request.base = 'y'
-  #   class Sub(Base):
-  #     @fiddle
-  #     def subfiddle(self, request):
-  #       request.sub = 'y'
-  #     @expose
-  #     def chk(self, request):
-  #       return 'ok:base=%s,sub=%s' % (getattr(request, 'base', 'n'), getattr(request, 'sub', 'n'))
-  #   self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=y,sub=y')
+  def test_fiddle_with_subclassing(self):
+    'Multiple @fiddles coming from both sub-class and super-class should apply'
+    class Base(Controller):
+      @fiddle
+      def basefiddle(self, request):
+        request.base = 'y'
+    class Sub(Base):
+      @fiddle
+      def subfiddle(self, request):
+        request.sub = 'y'
+      @expose
+      def chk(self, request):
+        return 'ok:base=%s,sub=%s' % (getattr(request, 'base', 'n'), getattr(request, 'sub', 'n'))
+    self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=y,sub=y')
+
+  def test_fiddle_with_subclassing_and_override(self):
+    'Multiple @fiddles coming from both sub-class and super-class should apply'
+    class Base(Controller):
+      @fiddle
+      def fiddle(self, request):
+        request.base = 'y'
+    class Sub(Base):
+      @fiddle
+      def fiddle(self, request):
+        request.sub = 'y'
+      @expose
+      def chk(self, request):
+        return 'ok:base=%s,sub=%s' % (getattr(request, 'base', 'n'), getattr(request, 'sub', 'n'))
+    self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=n,sub=y')
+
+  def test_fiddle_with_subclassing_and_super_cascade(self):
+    'Multiple @fiddles coming from both sub-class and super-class should apply'
+    class Base(Controller):
+      @fiddle
+      def fiddle(self, request):
+        request.base = 'y'
+    class Sub(Base):
+      @fiddle
+      def fiddle(self, request):
+        super(Sub, self).fiddle(request)
+        request.sub = 'y'
+      @expose
+      def chk(self, request):
+        return 'ok:base=%s,sub=%s' % (getattr(request, 'base', 'n'), getattr(request, 'sub', 'n'))
+    self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=y,sub=y')
 
   #----------------------------------------------------------------------------
   # TEST @LOOKUP

@@ -146,17 +146,22 @@ class Dispatcher(object):
     return None
 
   #----------------------------------------------------------------------------
-  def _getOp(self, request, controller, dectype, remainder):
+  def _getOp(self, request, controller, dectype, remainder, multi=False):
     if not isinstance(controller, Controller):
       raise TypeError('get-op called on non-controller')
     meta = self.getCachedMeta(controller)
+    ret = []
     for handler in meta[dectype]:
       apc = getattr(handler, self.PCATTR, None)
       if not apc:
         continue
       spec = self._select(request, None, controller, handler, dectype, remainder, getattr(apc, dectype, []))
       if spec is not None:
-        return (handler, spec)
+        if not multi:
+          return (handler, spec)
+        ret.append(handler)
+    if multi:
+      return (ret, None)
     return (None, None)
 
   #----------------------------------------------------------------------------
@@ -226,8 +231,8 @@ class Dispatcher(object):
         yield ('...', meth)
 
   #----------------------------------------------------------------------------
-  def getFiddler(self, request, controller, remainder):
-    return self._getOp(request, controller, 'fiddle', remainder)[0]
+  def getFiddlers(self, request, controller, remainder):
+    return self._getOp(request, controller, 'fiddle', remainder, multi=True)[0]
 
   #----------------------------------------------------------------------------
   def getIndexHandler(self, request, controller, remainder):
@@ -320,8 +325,8 @@ class Dispatcher(object):
       controller = controller(request)
 
     # do request fiddling
-    fiddler = self.getFiddler(request, controller, remainder)
-    if fiddler is not None:
+    fiddlers = self.getFiddlers(request, controller, remainder)
+    for fiddler in fiddlers:
       request = fiddler(request) or request
 
     if len(remainder) <= 0 or len(remainder) == 1 and remainder[0] == '':

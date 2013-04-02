@@ -43,8 +43,8 @@ class Controller(object):
 
       The :class:`pyramid.request.Request` object that this controller
       is specifically being instantiated to handle. If this controller
-      is being instantiated as a singleton (the more preferred approach),
-      then `request` must be ``None`` (the default).
+      is being instantiated as a singleton (the **MUCH** preferred
+      approach), then `request` must be ``None`` (the default).
 
     :param expose:
 
@@ -69,14 +69,14 @@ class Controller(object):
           def action(self, request):
             return Response(...)
 
-      would create a URL pattern ``/model/MODELID/action`` which is
+      would create a URL pattern ``/model/{MODELID}/action`` which is
       not directly invocable unless "MODELID" is replaced with a valid
       model id. Benefits to this approach (rather than creating the
       ModelController on the fly) are that:
 
       * The ModelController only needs to be instantiated once.
 
-      * The URL pattern /model/MODELID/action can be auto-discovered
+      * The URL pattern /model/{MODELID}/action can be auto-discovered
         (if one assumes the convention that non-exposed attribute
         controlers are lookup-targets).
     '''

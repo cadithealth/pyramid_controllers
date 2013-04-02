@@ -9,7 +9,7 @@ standard TurboGears request dispatch works.
 Install:
 
 ```
-pip install pyramid-controllers
+$ pip install pyramid-controllers
 ```
 
 Use:
@@ -44,7 +44,7 @@ class ResourceDispatcher(Controller):
     request.res = get_resource_by_id(res_id)
     return (self.RESOURCE_ID, rem)
 
-# and the root controller
+# the root controller with support for "/" and sub-controllers
 class RootController(Controller):
   about = AboutController()
   resource = ResourceDispatcher()
@@ -53,20 +53,24 @@ class RootController(Controller):
     # optional... this will allow '/desc' to describe this
     # controller hierarchy
     self.desc = DescribeController(self)
+  @index
+  def index(self, request):
+    return HTTPFound('/about/mission')
 
-# and configure all this in the pyramid main() app
+# and hook it all into pyramid in the app's main()
 def main(global_config, **settings):
   # ... (the usual pyramid startup calls) ...
   config.include('pyramid-controllers')
   config.add_controller('root', '/', RootController())
 ```
 
+
 ## Installation
 
 You can manually install it by running:
 
 ```
-pip install pyramid-controllers
+$ pip install pyramid-controllers
 ```
 
 However, a better approach is to use standard python distribution
@@ -82,7 +86,7 @@ pyramid.includes = pyramid-controllers
 
 or in code in your package's application initialization via:
 
-```
+``` python
 def main(global_config, **settings):
   # ...
   config.include('pyramid-controllers')
@@ -201,6 +205,7 @@ class ReflectController(RestController):
   def delete(self, request):
     return 'Hey! This is not the CIA, you cannot just DELETE me!'
 ```
+
 
 ## Decorators
 

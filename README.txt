@@ -48,8 +48,8 @@ class ResourceDispatcher(Controller):
 class RootController(Controller):
   about = AboutController()
   resource = ResourceDispatcher()
-  def __init__(self):
-    super(RootController, self).__init__()
+  def __init__(self, *args, **kw):
+    super(RootController, self).__init__(*args, **kw)
     # optional... this will allow '/desc' to describe this
     # controller hierarchy
     self.desc = DescribeController(self)

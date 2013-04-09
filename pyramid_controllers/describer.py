@@ -143,6 +143,7 @@ class DescribeController(Controller):
   * `showDynamic`:   shows presence of dynamically evaluated attributes.
   * `maxdepth`:      limits the number of path components to display.
   * `width`:         the width of text-based output (default: 79).
+  * `showExtra`:     for struct-formats, will include the `extra` override.
 
   With some exceptions, options are derived from the following sources
   descending order of preference (i.e. the first source overrides the
@@ -350,6 +351,7 @@ class DescribeController(Controller):
       ('showRest',       True),
       ('showImpl',       False),
       ('showInfo',       True),
+      ('showExtra',      True),
       ('showDynamic',    True),
       ('showGenerator',  True),
       ('showGenVersion', True),
@@ -946,6 +948,14 @@ class DescribeController(Controller):
       dentry['returns'] = [dict(pick(e, 'type', 'doc')) for e in entry.returns]
     if entry.raises is not None:
       dentry['raises'] = [dict(pick(e, 'type', 'doc')) for e in entry.raises]
+    if options.showExtra and entry.extra:
+      try:
+        for k, v in entry.extra.items():
+          if v is None:
+            dentry.pop(k, None)
+          else:
+            dentry[k] = v
+      except AttributeError: pass
     return dentry
 
   #----------------------------------------------------------------------------
@@ -1132,9 +1142,16 @@ class DescribeController(Controller):
   #----------------------------------------------------------------------------
   def format_struct(self, options, entries, dict=dict, includeEntry=False):
     '''
-    Similar to :meth:`format_et()`, except that the return value is a
-    dict structure instead of an ElementTree. See :meth:`format_et()`
-    for details.
+    Similar to :meth:`format_et()`, except:
+
+    * The return value is a dict structure instead of an ElementTree.
+
+    * If an entry contains an `extra` attribute that is a dictionary
+      and `showExtra` is enabled (the default), the returned endpoint
+      will have it's attributes *directly* extended with the
+      attributes from `extra`.
+
+    See :meth:`format_et()` for details.
     '''
     root = dict(application=dict(url=options.request.host_url))
     app = root['application']
@@ -1161,6 +1178,14 @@ class DescribeController(Controller):
           if includeEntry:
             dmeth['entry'] = meth
           endpoint['methods'].append(self._dentry(options, meth, dmeth, dict=dict))
+      if options.showExtra and entry.extra:
+        try:
+          for k, v in entry.extra.items():
+            if v is None:
+              endpoint.pop(k, None)
+            else:
+              endpoint[k] = v
+        except AttributeError: pass
       app['endpoints'].append(endpoint)
     return root
 

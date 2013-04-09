@@ -209,23 +209,28 @@ class TestDescribeController(TestHelper):
     root.desc = DescribeController(root, doc='URL tree description.',
                                    override=minRst)
     self.assertResponse(self.send(root, '/desc'), 200, '''\
-# Contents of "/"
+Contents of "/"
+***************
 
-## /rest/:
+/rest/
+======
 
   RESTful access, with sub-component
 
-  ### Supported Methods
+  Supported Methods
+  -----------------
 
   * **PUT**:
 
     Modify this object
 
-## /rest/access:
+/rest/access
+============
 
   Access control
 
-## /rest/groups:
+/rest/groups
+============
 
   Return the groups for this object
 
@@ -258,21 +263,27 @@ class TestDescribeController(TestHelper):
     root = SimpleRoot()
     root.desc = DescribeController(root, doc='URL tree description.',
                                    override=adict(format='rst'))
-    self.assertResponse(self.send(root, '/desc'), 200, '''# Contents of "/"
+    self.assertResponse(self.send(root, '/desc'), 200, '''\
+Contents of "/"
+***************
 
-## /:
+/
+=
 
   The default root.
 
-## /desc:
+/desc
+=====
 
   URL tree description.
 
-## /rest:
+/rest
+=====
 
   A RESTful entry.
 
-  ### Supported Methods
+  Supported Methods
+  -----------------
 
   * **DELETE**:
 
@@ -290,19 +301,23 @@ class TestDescribeController(TestHelper):
 
     Updates the value.
 
-## /sub/method:
+/sub/method
+===========
 
   This method outputs a JSON list.
 
-## /swi:
+/swi
+====
 
   A sub-controller providing only an index.
 
-## /¿unknown?:
+/¿unknown?
+==========
 
   A dynamically generated sub-controller.
 
-# Legend
+Legend
+******
 
   * `{{NAME}}`:
 
@@ -346,9 +361,12 @@ class TestDescribeController(TestHelper):
     root = Root()
     root.desc = DescribeController(root, doc='URL tree description.',
                                    override=minRst.update())
-    self.assertResponse(self.send(root, '/desc'), 200, '''# Contents of "/"
+    self.assertResponse(self.send(root, '/desc'), 200, '''\
+Contents of "/"
+***************
 
-## /:
+/
+=
 
   The index method
 

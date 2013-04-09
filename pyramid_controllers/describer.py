@@ -111,10 +111,13 @@ class Entry(adict):
 def normLines(text, indent=None):
   if not text:
     return ''
-  text = str(text).replace('\r\n', '\n').replace('\r', '\n')
+  text = str(text).replace('\r\n', '\n').replace('\r', '\n').strip()
   if not indent:
     return text
-  return text.replace('\n', '\n' + ( ' ' * indent ))
+  indent = ' ' * indent
+  text = text.replace('\n', '\n' + indent)
+  text = text.replace('\n' + indent + '\n', '\n\n')
+  return text.strip()
 
 #------------------------------------------------------------------------------
 class DescribeController(Controller):
@@ -718,7 +721,7 @@ class DescribeController(Controller):
     '''
     # TODO: i18n...
     # todo: mini-templatize this?...
-    ret = self.formattext_rst(options, entry.doc, width) + '\n'
+    ret = self.formattext_rst(options, entry.doc, width).strip() + '\n\n'
     if entry.params:
       ret += ':Parameters:\n\n'
       for node in entry.params:
@@ -749,7 +752,7 @@ class DescribeController(Controller):
         if options.showInfo and meth.doc:
           ret += '  '
           ret += normLines(self.formatdoc_rst(options, meth, width - 2), indent=2)
-          ret += '\n'
+          ret += '\n\n'
     return ret
 
   #----------------------------------------------------------------------------

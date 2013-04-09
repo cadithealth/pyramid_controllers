@@ -11,8 +11,12 @@
 import types, inspect
 from .util import adict, isstr
 
+PCATTR = '__pyramid_controllers__'
+# todo: fix this so that both attributes can use the same name
+PCCTRLATTR = '__pyramid_controllers_class__'
+
 #------------------------------------------------------------------------------
-class Decoration(object):
+class MethodDecoration(object):
   def __init__(self):
     self.fiddle  = []
     self.expose  = []
@@ -26,9 +30,9 @@ class Decorator(object):
   def __init__(self, **kw):
     self.kw = adict(kw)
   def __call__(self, wrapped):
-    if not hasattr(wrapped, '__pyramid_controllers__'):
-      wrapped.__pyramid_controllers__ = Decoration()
-    self.enhance(wrapped, wrapped.__pyramid_controllers__, self.kw)
+    if not hasattr(wrapped, PCATTR):
+      setattr(wrapped, PCATTR, MethodDecoration())
+    self.enhance(wrapped, getattr(wrapped, PCATTR), self.kw)
     return wrapped
   def enhance(self, wrapped, decoration, kw):
     getattr(decoration, self.attribute).append(kw)
@@ -288,28 +292,42 @@ fiddle = makeDecorator(FiddleDecorator, doc='''\
 
   ''')
 
+
+#------------------------------------------------------------------------------
+class ClassDecoration(object):
+  def __init__(self):
+    self.defaults = []
+    self.meta     = None
+  def apply(self, wrapped):
+    for defs in reversed(self.defaults):
+      for name, attr in inspect.getmembers(wrapped):
+        apc = getattr(attr, PCATTR, None)
+        if not apc:
+          continue
+        for dectype in ('expose', 'index', 'default'):
+          for spec in getattr(apc, dectype, []):
+            if 'renderer' in defs:
+              if 'renderer' not in spec:
+                spec.renderer = defs.renderer
+        for dectype in ('expose',):
+          for spec in getattr(apc, dectype, []):
+            if 'ext' in defs:
+              if 'name' not in spec and 'ext' not in spec:
+                if isstr(defs.ext):
+                  spec.name = [name + '.' + defs.ext]
+                else:
+                  spec.name = [name + '.' + e for e in defs.ext]
+
 #------------------------------------------------------------------------------
 class ExposeDefaultsDecorator(object):
   def __init__(self, **kw):
     self.kw = adict(kw)
   def __call__(self, wrapped):
-    for name, attr in inspect.getmembers(wrapped):
-      apc = getattr(attr, '__pyramid_controllers__', None)
-      if not apc:
-        continue
-      for dectype in ('expose', 'index', 'default'):
-        for spec in getattr(apc, dectype, []):
-          if 'renderer' in self.kw:
-            if 'renderer' not in spec:
-              spec.renderer = self.kw.renderer
-      for dectype in ('expose',):
-        for spec in getattr(apc, dectype, []):
-          if 'ext' in self.kw:
-            if 'name' not in spec and 'ext' not in spec:
-              if isstr(self.kw.ext):
-                spec.name = [name + '.' + self.kw.ext]
-              else:
-                spec.name = [name + '.' + e for e in self.kw.ext]
+    if not hasattr(wrapped, PCCTRLATTR):
+      setattr(wrapped, PCCTRLATTR, ClassDecoration())
+    pc = getattr(wrapped, PCCTRLATTR)
+    pc.defaults.append(self.kw)
+    pc.apply(wrapped)
     return wrapped
 
 #------------------------------------------------------------------------------

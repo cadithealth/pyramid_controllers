@@ -24,6 +24,7 @@ from pyramid.httpexceptions import HTTPException, WSGIHTTPException
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPForbidden
 from pyramid.renderers import render_to_response
 from .controller import Controller
+from . import decorator
 from .util import adict, isstr
 
 path2meth = re.compile('[^a-zA-Z0-9_]')
@@ -88,8 +89,12 @@ class Dispatcher(object):
     self.autoDecorate      = autoDecorate
 
   #----------------------------------------------------------------------------
-  def getMeta(self, controller):
+  def makeMeta(self, controller):
     meta = adict(fiddle=[], expose={}, index=[], lookup=[], default=[])
+    cpc = getattr(controller, decorator.PCCTRLATTR, None)
+    # TODO: this call has side-effects!... modify this so that it doesn't.
+    if cpc:
+      cpc.apply(controller)
     for name, attr in inspect.getmembers(controller):
       apc = getattr(attr, self.PCATTR, None)
       if not apc:
@@ -106,18 +111,19 @@ class Dispatcher(object):
     return meta
 
   #----------------------------------------------------------------------------
-  def getCachedMeta(self, controller):
+  def getMeta(self, controller):
     if not self.autoDecorate:
-      return self.getMeta(controller)
+      return self.makeMeta(controller)
     # TODO: how to avoid this object attribute pollution?...
     # TODO: what if this controller uses dynamically generated methods
     #       or __getitem__?...
     pc = getattr(controller, self.PCATTR, None)
     if pc is None:
-      pc = controller.__pyramid_controllers__ = adict()
+      pc = adict()
+      setattr(controller, self.PCATTR, pc)
     if pc.meta is not None:
       return pc.meta
-    pc.meta = self.getMeta(controller)
+    pc.meta = self.makeMeta(controller)
     return pc.meta
 
   #----------------------------------------------------------------------------
@@ -149,7 +155,7 @@ class Dispatcher(object):
   def _getOp(self, request, controller, dectype, remainder, multi=False):
     if not isinstance(controller, Controller):
       raise TypeError('get-op called on non-controller')
-    meta = self.getCachedMeta(controller)
+    meta = self.getMeta(controller)
     ret = []
     for handler in meta[dectype]:
       apc = getattr(handler, self.PCATTR, None)
@@ -186,7 +192,7 @@ class Dispatcher(object):
     different rendering conditions, then they will both be returned in
     undefined order.
     '''
-    meta = self.getCachedMeta(controller)
+    meta = self.getMeta(controller)
     for meth in meta.index:
       yield ('', meth)
     names = dict()
@@ -282,7 +288,7 @@ class Dispatcher(object):
     handler = self._filterNext(request, controller, remainder, handler)
     if handler is not None:
       return handler
-    meta = self.getCachedMeta(controller)
+    meta = self.getMeta(controller)
     for alias in meta.expose.get(name, []):
       ret = self._filterNext(request, controller, remainder, alias)
       if ret:

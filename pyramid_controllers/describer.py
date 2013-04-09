@@ -439,7 +439,7 @@ class DescribeController(Controller):
     if ret.isRest:
       ret.isHandler = True
     else:
-      meta = options.dispatcher.getCachedMeta(controller)
+      meta = options.dispatcher.getMeta(controller)
       ret.isHandler = bool(meta.index)
     return ret
 
@@ -579,7 +579,7 @@ class DescribeController(Controller):
     if options.showInfo:
       entry.doc = inspect.getdoc(entry.controller or entry.handler)
       if options.pruneIndex and entry.controller:
-        meta = options.dispatcher.getCachedMeta(entry.controller)
+        meta = options.dispatcher.getMeta(entry.controller)
         for handler in meta.index or []:
           entry.doc = inspect.getdoc(handler) or entry.doc
 

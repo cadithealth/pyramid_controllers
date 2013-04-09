@@ -434,6 +434,56 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/'),        200, "{'foo': 'idx'}")
     self.assertResponse(self.send(Root(), '/zig-zag'), 200, "{'foo': 'zig-zag'}")
 
+  def test_expose_defaults_renderer_with_subclassing(self):
+    @expose_defaults(renderer='repr')
+    class Base(Controller):
+      @expose
+      def rep(self, request): return dict(m='rep')
+      @expose(renderer='raw')
+      def raw(self, request): return dict(m='raw')
+    class Root(Base):
+      @expose
+      def srep(self, request): return dict(m='srep')
+      @expose(renderer='raw')
+      def sraw(self, request): return dict(m='sraw')
+    def raw(info):
+      def _render(value, system):
+        return 'RAW:' + repr(value)
+      return _render
+    self.renderers['raw'] = raw
+    self.assertResponse(self.send(Root(), "/rep"),  200, "{'m': 'rep'}")
+    self.assertResponse(self.send(Root(), "/raw"),  200, "RAW:{'m': 'raw'}")
+    self.assertResponse(self.send(Root(), "/srep"), 200, "{'m': 'srep'}")
+    self.assertResponse(self.send(Root(), "/sraw"), 200, "RAW:{'m': 'sraw'}")
+
+  # def test_expose_defaults_does_not_pollute(self):
+  #   class Base(Controller):
+  #     def __init__(self):
+  #       super(Base,self).__init__()
+  #       self.count = 0
+  #     @expose
+  #     def m(self, request):
+  #       self.count += 1
+  #       return dict(c=self.count)
+  #   @expose_defaults(renderer='raw')
+  #   class Raw(Base):
+  #     pass
+  #   @expose_defaults(renderer='repr')
+  #   class Rep(Base):
+  #     pass
+  #   class Root(Controller):
+  #     raw = Raw()
+  #     rep = Rep()
+  #   def raw(info):
+  #     def _render(value, system):
+  #       return 'RAW:' + repr(value)
+  #     return _render
+  #   self.renderers['raw'] = raw
+  #   root = Root()
+  #   self.assertResponse(self.send(root, '/raw/m'), 200, "RAW:{'c': 1}")
+  #   self.assertResponse(self.send(root, '/rep/m'), 200, "{'c': 2}")
+  #   self.assertResponse(self.send(root, '/raw/m'), 200, "RAW:{'c': 3}")
+
   def test_expose_defaults_ext(self):
     'Controllers can specify default extensions for member @expose calls'
     @expose_defaults(ext='json')
@@ -462,6 +512,59 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/zog.json'), 404)
     self.assertResponse(self.send(Root(), '/zog.js'),   404)
     self.assertResponse(self.send(Root(), '/zog.css'),  404)
+
+  def test_expose_defaults_with_subclassing_from_base(self):
+    @expose_defaults(ext='json')
+    class Base(Controller):
+      @expose
+      def foo(self, request): return 'foo'
+    class Root(Base):
+      @expose
+      def bar(self, request): return 'bar'
+    self.assertResponse(self.send(Root(), '/foo.json'), 200, 'foo')
+    self.assertResponse(self.send(Root(), '/foo'),      404)
+    self.assertResponse(self.send(Root(), '/bar.json'), 200, 'bar')
+    self.assertResponse(self.send(Root(), '/bar'),      404)
+
+  def test_expose_defaults_with_subclassing_to_base(self):
+    class Base(Controller):
+      @expose
+      def foo(self, request): return 'foo'
+    @expose_defaults(ext='json')
+    class Root(Base):
+      @expose
+      def bar(self, request): return 'bar'
+    self.assertResponse(self.send(Root(), '/foo.json'), 200, 'foo')
+    self.assertResponse(self.send(Root(), '/foo'),      404)
+    self.assertResponse(self.send(Root(), '/bar.json'), 200, 'bar')
+    self.assertResponse(self.send(Root(), '/bar'),      404)
+
+  def test_expose_defaults_with_subclassing_and_override(self):
+    @expose_defaults(ext='json')
+    class Base(Controller):
+      @expose
+      def foo(self, request): return 'foo'
+    @expose_defaults(ext='js')
+    class Root(Base):
+      @expose
+      def bar(self, request): return 'bar'
+    self.assertResponse(self.send(Root(), '/foo.json'), 200, 'foo')
+    self.assertResponse(self.send(Root(), '/foo'),      404)
+    self.assertResponse(self.send(Root(), '/bar.js'),   200, 'bar')
+    self.assertResponse(self.send(Root(), '/bar.json'), 404)
+    self.assertResponse(self.send(Root(), '/bar'),      404)
+
+  def test_expose_defaults_with_override(self):
+    @expose_defaults(ext='json')
+    class Root(Controller):
+      @expose
+      def foo(self, request): return 'foo'
+      @expose(ext=None)
+      def bar(self, request): return 'bar'
+    self.assertResponse(self.send(Root(), '/foo.json'), 200, 'foo')
+    self.assertResponse(self.send(Root(), '/foo'),      404)
+    self.assertResponse(self.send(Root(), '/bar'),      200, 'bar')
+    self.assertResponse(self.send(Root(), '/bar.json'), 404)
 
 #------------------------------------------------------------------------------
 # end of $Id$

@@ -18,6 +18,9 @@
     def index(...): ...
   be accessible at both /path/ and /path/index.
 
+- support @expose(methods=...) and @expose_defaults(methods=...) which
+  limits what methods this function will support
+
 - does pyramid_handlers not pollute the class namespace... how does
   it achieve that????
   the unit test from
@@ -46,22 +49,6 @@
 - create a command-line program that detects RootControllers and displays
   their hierarchy tree...
 
-- this doesn't work as it should:
-
-    class Base(Controller):
-      @fiddle
-      def first(self, request):
-        # check something...
-
-    class Extend(Base):
-      @fiddle
-      def second(self, request):
-        # check something else...
-
-  currently, only the first one gets called...
-  (unit test pyramid_controllers.test_dispatcher.test_fiddle_with_subclassing
-  tests this but is disabled)
-
 - implement a method name transformation logic. eg. if a request comes
   in for "such & such", then look up "such_and_such"... ok, that might
   be a bit too much, but perhaps something like 'such___such'?
@@ -69,10 +56,6 @@
 - make `DescriberController.formattext_html` try to load docutils, and
   if successful, do rST formatting with that. otherwise fallback to the
   pseudo-stuff...
-
-- update the documentations!
-    => simplify
-    => get it to render correctly on pypi
 
 - currently the @lookup inspection done by the describer is a little
   'odd':
@@ -96,3 +79,9 @@
   in both cases, the resulting dpath will be '.../foo/{USER_ID}/...'
   **** the problem with this is: how does the framework then continue
   the inspection of UserController?...
+
+- the unit test `test_expose_defaults_does_not_pollute` is currently
+  disabled as it fails... fix it!
+
+- REST controllers do not limit direct access (e.g. "PUT /object" and
+  "GET /object/put") invoke the same handler... is that ok?

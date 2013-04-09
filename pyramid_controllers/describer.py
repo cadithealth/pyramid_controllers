@@ -698,35 +698,78 @@ class DescribeController(Controller):
 
   #----------------------------------------------------------------------------
   def formattext_rst(self, options, text, width):
-    return self.formattext_txt(options, text, width)
+    '''
+    Formats blobs of text for reStructuredText output - the default
+    implement simply returns the text as-is. Sub-classes are
+    encouraged to perform more intelligent formatting and to make use
+    of `width`.
+    '''
+    return text
 
   #----------------------------------------------------------------------------
   def formatdoc_rst(self, options, entry, width):
     '''
     Formats the `entry`'s documentation as plain-text to fit in the
-    `width` specified. The default implementation simply collapses all
-    whitespace and uses :meth:`textwrap.fill()` to wrap the resulting
-    text. Sub-classes are encouraged to perform more intelligent
-    formatting.
+    `width` specified. The default implementation returns the entry's
+    documentation passed through :meth:`formattext_rst` (which just
+    returns the text as-is) with parameters, returns, raises, and
+    methods appended. Sub-classes are encouraged to override
+    :meth:`formattext_rst`.
     '''
-    return entry.doc
+    # TODO: i18n...
+    # todo: mini-templatize this?...
+    ret = self.formattext_rst(options, entry.doc, width) + '\n'
+    if entry.params:
+      ret += ':Parameters:\n\n'
+      for node in entry.params:
+        ret += '  **{}** : {}'.format(node.name, node.type or '')
+        if node.optional:
+          ret += ', optional'
+        if node.default:
+          ret += ', ' + node.default
+        ret += '\n\n    '
+        ret += normLines(self.formattext_rst(options, node.doc, width - 4), indent=4)
+        ret += '\n\n'
+    if entry.returns:
+      ret += ':Returns:\n\n'
+      for node in entry.returns:
+        ret += '  **{}**\n\n    '.format(node.type)
+        ret += normLines(self.formattext_rst(options, node.doc, width - 4), indent=4)
+        ret += '\n\n'
+    if entry.raises:
+      ret += ':Raises:\n\n'
+      for node in entry.raises:
+        ret += '  **{}**\n\n    '.format(node.type)
+        ret += normLines(self.formattext_rst(options, node.doc, width - 4), indent=4)
+        ret += '\n\n'
+    if options.showRest and entry.methods:
+      ret += 'Supported Methods\n-----------------\n\n'
+      for meth in entry.methods:
+        ret += '* **{}**:\n\n'.format(meth.method)
+        if options.showInfo and meth.doc:
+          ret += '  '
+          ret += normLines(self.formatdoc_rst(options, meth, width - 2), indent=2)
+          ret += '\n'
+    return ret
 
   #----------------------------------------------------------------------------
   def format_rst(self, options, entries):
     '''
     Formats the DescribeController output as reStructuredText.
     '''
-    ret = '# Contents of "{}"\n\n'.format(self.path)
+    ret = 'Contents of "{}"'.format(self.path)
+    ret += '\n' + ( '*' * len(ret) ) + '\n\n'
     # TODO: handle entries with the same name... (ie. multi-condition aliasing)
     # TODO: i18n...
+    # todo: mini-templatize this?...
     for entry in entries:
       if entry.isRest and entry.itype == 'method':
         continue
-      ret += '## ' + entry.dpath
+      title = entry.dpath
       if not entry.isLeaf:
-        if not ret.endswith('/'):
-          ret += '/'
-      ret += ':\n\n'
+        if not title.endswith('/'):
+          title += '/'
+      ret += title + '\n' + ( '=' * len(title) ) + '\n\n'
       if options.showImpl and entry.ipath:
         ipath = entry.ipath
         if entry.itype == 'instance':
@@ -736,19 +779,11 @@ class DescribeController(Controller):
         ret += '  '
         ret += normLines(self.formatdoc_rst(options, entry, options.width - 2), indent=2)
         ret += '\n\n'
-      if options.showRest and entry.methods:
-        ret += '  ### Supported Methods\n\n'
-        for meth in entry.methods:
-          ret += '  * **{}**:\n\n'.format(meth.method)
-          if options.showInfo and meth.doc:
-            ret += '    '
-            ret += normLines(self.formatdoc_rst(options, meth, options.width - 4), indent=4)
-            ret += '\n\n'
     if options.showLegend:
-      ret += '# Legend\n\n'
+      ret += 'Legend\n******\n\n'
       for item, desc in self.legend:
         ret += '  * `' + item + '`:\n\n    '
-        ret += normLines(self.formattext_rst(options, desc, options.width - 4), indent=4)
+        ret += normLines(self.formattext_txt(options, desc, options.width - 4), indent=4)
         ret += '\n\n'
     if options.showGenerator:
       ret += '.. generator: pyramid-controllers'
@@ -834,6 +869,7 @@ class DescribeController(Controller):
     output attractive and useful.
     '''
     # todo: use an XSLT stylesheet transform from XML instead?...
+    #       or an rST-to-HTML converter?...
     # TODO: i18n...
     ret = u'''<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">

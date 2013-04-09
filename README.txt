@@ -15,6 +15,12 @@ $ pip install pyramid-controllers
 Use:
 
 ``` python
+# the following application serves these URLs:
+#   /
+#   /about/team
+#   /about/mission
+#   /resource/{RESOURCE_ID}   (RESTful: GET and PUT)
+
 # standard pyramid-controller imports
 from pyramid_controllers import \
   Controller, RestController, DescribeController, \

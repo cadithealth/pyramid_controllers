@@ -25,7 +25,7 @@ HTTP_METHODS = (
   #   http://annevankesteren.nl/2007/10/http-methods
   # todo: need to do some real research and bump this.
 
-  # RFC 2616:
+  # RFC 2616 (HTTP 1.1):
   'OPTIONS',
   'GET',
   'HEAD',
@@ -35,7 +35,7 @@ HTTP_METHODS = (
   'TRACE',
   'CONNECT',
 
-  # RFC 2518:
+  # RFC 2518 (WebDAV):
   'PROPFIND',
   'PROPPATCH',
   'MKCOL',
@@ -44,7 +44,7 @@ HTTP_METHODS = (
   'LOCK',
   'UNLOCK',
 
-  # RFC 3253:
+  # RFC 3253 (WebDAV versioning):
   'VERSION-CONTROL',
   'REPORT',
   'CHECKOUT',
@@ -57,10 +57,10 @@ HTTP_METHODS = (
   'BASELINE-CONTROL',
   'MKACTIVITY',
 
-  # RFC 3648:
+  # RFC 3648 (WebDAV collections):
   'ORDERPATCH',
 
-  # RFC 3744:
+  # RFC 3744 (WebDAV access control):
   'ACL',
 
   # draft-dusseault-http-patch:

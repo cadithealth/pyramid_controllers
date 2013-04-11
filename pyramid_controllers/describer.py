@@ -293,6 +293,8 @@ class DescribeController(Controller):
         % (type(root),))
     self._root     = root
     self.path      = re.sub('/*$', '', (path or '').strip()) or '/'
+    if isinstance(formats, basestring):
+      formats = (formats,)
     self.formats   = formats or ('txt', 'rst', 'html', 'json', 'wadl', 'yaml', 'xml')
     self.restVerbs = [meth2action(v) for v in restVerbs] if restVerbs \
         else HTTP_METHODS_NORM

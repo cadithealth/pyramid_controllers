@@ -81,13 +81,13 @@ class StaticDescribeController(DescribeController):
     if not entry or entry.path != '/rest/post':
       return entry
     entry.params = (
-      adict(name='size', type='int', default=4096, optional=True, doc='The anticipated maximum size'),
-      adict(name='text', type='str', optional=False, doc='The text content for the posting'),
+      adict(id='param-_2Frest_3F_5Fmethod_3DPOST-size', name='size', type='int', default=4096, optional=True, doc='The anticipated maximum size'),
+      adict(id='param-_2Frest_3F_5Fmethod_3DPOST-text', name='text', type='str', optional=False, doc='The text content for the posting'),
       )
-    entry.returns = (adict(type='str', doc='The ID of the new posting'),)
+    entry.returns = (adict(id='return-_2Frest_3F_5Fmethod_3DPOST-0-str', type='str', doc='The ID of the new posting'),)
     entry.raises  = (
-      adict(type='HTTPUnauthorized', doc='Authenticated access is required'),
-      adict(type='HTTPForbidden', doc='The user does not have posting privileges'),
+      adict(id='raise-_2Frest_3F_5Fmethod_3DPOST-0-HTTPUnauthorized', type='HTTPUnauthorized', doc='Authenticated access is required'),
+      adict(id='raise-_2Frest_3F_5Fmethod_3DPOST-1-HTTPForbidden', type='HTTPForbidden', doc='The user does not have posting privileges'),
       )
     return entry
 
@@ -375,21 +375,6 @@ Contents of "/"
   #----------------------------------------------------------------------------
   def test_format_html(self):
     'The Describer can emit HTML'
-    class StaticDescribeController(DescribeController):
-      def decorateEntry(self, options, entry):
-        entry = super(StaticDescribeController, self).decorateEntry(options, entry)
-        if not entry or entry.path != '/rest/post':
-          return entry
-        entry.params = (
-          adict(name='size', type='int', default=4096, optional=True, doc='The anticipated maximum size'),
-          adict(name='text', type='str', optional=False, doc='The text content for the posting'),
-          )
-        entry.returns = (adict(type='str', doc='The ID of the new posting'),)
-        entry.raises  = (
-          adict(type='HTTPUnauthorized', doc='Authenticated access is required'),
-          adict(type='HTTPForbidden', doc='The user does not have posting privileges'),
-          )
-        return entry
     root = SimpleRoot()
     root.desc = StaticDescribeController(root, doc='URL tree description.',
                                          override=adict(format='html'))
@@ -409,39 +394,39 @@ Contents of "/"
  <body>
   <h1>Contents of "/"</h1>
   <dl class="endpoints">
-   <dt>/</dt>
+   <dt id="endpoint-_2F">/</dt>
    <dd>
     <p>The default root.</p>
    </dd>
-   <dt>/desc</dt>
+   <dt id="endpoint-_2Fdesc">/desc</dt>
    <dd>
     <p>URL tree description.</p>
    </dd>
-   <dt>/rest</dt>
+   <dt id="endpoint-_2Frest">/rest</dt>
    <dd>
     <p>A RESTful entry.</p>
     <h3>Supported Methods</h3>
     <dl class="methods">
-     <dt>DELETE</dt>
+     <dt id="method-_2Frest-DELETE">DELETE</dt>
      <dd>
       <p>Deletes the entry.</p>
      </dd>
-     <dt>GET</dt>
+     <dt id="method-_2Frest-GET">GET</dt>
      <dd>
       <p>Gets the current value.</p>
      </dd>
-     <dt>POST</dt>
+     <dt id="method-_2Frest-POST">POST</dt>
      <dd>
       <p>Creates a new entry.</p>
       <h4>Parameters</h4>
       <dl class="params">
-       <dt>size</dt>
+       <dt id="param-_2Frest_3F_5Fmethod_3DPOST-size">size</dt>
        <dd>
         <em>int, optional, default 4096</em>
         <br/>
         <p>The anticipated maximum size</p>
        </dd>
-       <dt>text</dt>
+       <dt id="param-_2Frest_3F_5Fmethod_3DPOST-text">text</dt>
        <dd>
         <em>str</em>
         <br/>
@@ -450,38 +435,38 @@ Contents of "/"
       </dl>
       <h4>Returns</h4>
       <dl class="returns">
-       <dt>str</dt>
+       <dt id="return-_2Frest_3F_5Fmethod_3DPOST-0-str">str</dt>
        <dd>
         <p>The ID of the new posting</p>
        </dd>
       </dl>
       <h4>Raises</h4>
       <dl class="raises">
-       <dt>HTTPUnauthorized</dt>
+       <dt id="raise-_2Frest_3F_5Fmethod_3DPOST-0-HTTPUnauthorized">HTTPUnauthorized</dt>
        <dd>
         <p>Authenticated access is required</p>
        </dd>
-       <dt>HTTPForbidden</dt>
+       <dt id="raise-_2Frest_3F_5Fmethod_3DPOST-1-HTTPForbidden">HTTPForbidden</dt>
        <dd>
         <p>The user does not have posting privileges</p>
        </dd>
       </dl>
      </dd>
-     <dt>PUT</dt>
+     <dt id="method-_2Frest-PUT">PUT</dt>
      <dd>
       <p>Updates the value.</p>
      </dd>
     </dl>
    </dd>
-   <dt>/sub/method</dt>
+   <dt id="endpoint-_2Fsub_2Fmethod">/sub/method</dt>
    <dd>
     <p>This method outputs a JSON list.</p>
    </dd>
-   <dt>/swi</dt>
+   <dt id="endpoint-_2Fswi">/swi</dt>
    <dd>
     <p>A sub-controller providing only an index.</p>
    </dd>
-   <dt>/¿unknown?</dt>
+   <dt id="endpoint-_2Funknown">/¿unknown?</dt>
    <dd>
     <p>A dynamically generated sub-controller.</p>
    </dd>
@@ -528,32 +513,32 @@ Contents of "/"
 <?xml version="1.0" encoding="UTF-8"?>
 <application url="http://localhost">
  <endpoints>
-  <endpoint name="" path="/" decorated-name="" decorated-path="/">
+  <endpoint name="" path="/" decorated-name="" decorated-path="/" id="endpoint-_2F">
    <doc>The default root.</doc>
-   <method name="GET"/>
+   <method id="method-_2F-GET" name="GET"/>
   </endpoint>
-  <endpoint name="desc" path="/desc" decorated-name="desc" decorated-path="/desc">
+  <endpoint name="desc" path="/desc" decorated-name="desc" decorated-path="/desc" id="endpoint-_2Fdesc">
    <doc>URL tree description.</doc>
-   <method name="GET"/>
+   <method id="method-_2Fdesc-GET" name="GET"/>
   </endpoint>
-  <endpoint name="rest" path="/rest" decorated-name="rest" decorated-path="/rest">
+  <endpoint name="rest" path="/rest" decorated-name="rest" decorated-path="/rest" id="endpoint-_2Frest">
    <doc>A RESTful entry.</doc>
-   <method name="DELETE"><doc>Deletes the entry.</doc></method>
-   <method name="GET"><doc>Gets the current value.</doc></method>
-   <method name="POST"><doc>Creates a new entry.</doc></method>
-   <method name="PUT"><doc>Updates the value.</doc></method>
+   <method id="method-_2Frest-DELETE" name="DELETE"><doc>Deletes the entry.</doc></method>
+   <method id="method-_2Frest-GET" name="GET"><doc>Gets the current value.</doc></method>
+   <method id="method-_2Frest-POST" name="POST"><doc>Creates a new entry.</doc></method>
+   <method id="method-_2Frest-PUT" name="PUT"><doc>Updates the value.</doc></method>
   </endpoint>
-  <endpoint name="method" path="/sub/method" decorated-name="method" decorated-path="/sub/method">
+  <endpoint name="method" path="/sub/method" decorated-name="method" decorated-path="/sub/method" id="endpoint-_2Fsub_2Fmethod">
    <doc>This method outputs a JSON list.</doc>
-   <method name="GET"/>
+   <method id="method-_2Fsub_2Fmethod-GET" name="GET"/>
   </endpoint>
-  <endpoint name="swi" path="/swi" decorated-name="swi" decorated-path="/swi">
+  <endpoint name="swi" path="/swi" decorated-name="swi" decorated-path="/swi" id="endpoint-_2Fswi">
    <doc>A sub-controller providing only an index.</doc>
-   <method name="GET"/>
+   <method id="method-_2Fswi-GET" name="GET"/>
   </endpoint>
-  <endpoint name="unknown" path="/unknown" decorated-name="¿unknown?" decorated-path="/¿unknown?">
+  <endpoint name="unknown" path="/unknown" decorated-name="¿unknown?" decorated-path="/¿unknown?" id="endpoint-_2Funknown">
    <doc>A dynamically generated sub-controller.</doc>
-   <method name="GET"/>
+   <method id="method-_2Funknown-GET" name="GET"/>
   </endpoint>
  </endpoints>
 </application>
@@ -578,58 +563,73 @@ application:
   url: 'http://localhost'
   endpoints:
     - name: ''
+      id: 'endpoint-_2F'
       path: /
       decoratedName: ''
       decoratedPath: /
       doc: The default root.
     - name: desc
+      id: 'endpoint-_2Fdesc'
       path: /desc
       decoratedName: desc
       decoratedPath: /desc
       doc: URL tree description.
     - name: rest
+      id: 'endpoint-_2Frest'
       path: /rest
       decoratedName: rest
       decoratedPath: /rest
       doc: A RESTful entry.
       methods:
         - name: DELETE
+          id: 'method-_2Frest-DELETE'
           doc: Deletes the entry.
         - name: GET
+          id: 'method-_2Frest-GET'
           doc: Gets the current value.
         - name: POST
+          id: 'method-_2Frest-POST'
           doc: Creates a new entry.
           params:
             - name: size
+              id: 'param-_2Frest_3F_5Fmethod_3DPOST-size'
               type: int
               optional: true
               default: 4096
               doc: The anticipated maximum size
             - name: text
+              id: 'param-_2Frest_3F_5Fmethod_3DPOST-text'
               type: str
               optional: false
               doc: The text content for the posting
           returns:
             - type: str
+              id: 'return-_2Frest_3F_5Fmethod_3DPOST-0-str'
               doc: The ID of the new posting
           raises:
             - type: HTTPUnauthorized
+              id: 'raise-_2Frest_3F_5Fmethod_3DPOST-0-HTTPUnauthorized'
               doc: Authenticated access is required
             - type: HTTPForbidden
+              id: 'raise-_2Frest_3F_5Fmethod_3DPOST-1-HTTPForbidden'
               doc: The user does not have posting privileges
         - name: PUT
+          id: 'method-_2Frest-PUT'
           doc: Updates the value.
     - name: method
+      id: 'endpoint-_2Fsub_2Fmethod'
       path: /sub/method
       decoratedName: method
       decoratedPath: /sub/method
       doc: This method outputs a JSON list.
     - name: swi
+      id: 'endpoint-_2Fswi'
       path: /swi
       decoratedName: swi
       decoratedPath: /swi
       doc: A sub-controller providing only an index.
     - name: unknown
+      id: 'endpoint-_2Funknown'
       path: /unknown
       decoratedName: ¿unknown?
       decoratedPath: /¿unknown?
@@ -665,11 +665,13 @@ application:
   url: http://localhost
   endpoints:
     - name: desc
+      id: 'endpoint-_2Fdesc'
       path: /desc
       decoratedName: desc
       decoratedPath: /desc
       doc: URL tree description.
     - name: describe
+      id: 'endpoint-_2Fdescribe'
       path: /describe
       decoratedName: describe
       decoratedPath: /describe
@@ -689,39 +691,47 @@ application:
     "url": "http://localhost",
     "endpoints": [
       { "name": "",
+        "id": "endpoint-_2F",
         "path": "/",
         "decoratedName": "",
         "decoratedPath": "/",
         "doc": "The default root."
       },
       { "name": "desc",
+        "id": "endpoint-_2Fdesc",
         "path": "/desc",
         "decoratedName": "desc",
         "decoratedPath": "/desc",
         "doc": "URL tree description."
       },
       { "name": "rest",
+        "id": "endpoint-_2Frest",
         "path": "/rest",
         "decoratedName": "rest",
         "decoratedPath": "/rest",
         "doc": "A RESTful entry.",
         "methods": [
           { "name": "DELETE",
+            "id": "method-_2Frest-DELETE",
             "doc": "Deletes the entry."
           },
           { "name": "GET",
+            "id": "method-_2Frest-GET",
             "doc": "Gets the current value."
           },
           { "name": "POST",
+            "id": "method-_2Frest-POST",
             "doc": "Creates a new entry.",
             "params": [
               { "name": "size",
+                "id": "param-_2Frest_3F_5Fmethod_3DPOST-size",
                 "type": "int",
                 "optional": true,
                 "default": 4096,
                 "doc": "The anticipated maximum size"
               },
               { "name": "text",
+                "id": "param-_2Frest_3F_5Fmethod_3DPOST-text",
                 "type": "str",
                 "optional": false,
                 "doc": "The text content for the posting"
@@ -729,36 +739,43 @@ application:
             ],
             "returns": [
               { "type": "str",
+                "id": "return-_2Frest_3F_5Fmethod_3DPOST-0-str",
                 "doc": "The ID of the new posting"
               }
             ],
             "raises": [
               { "type": "HTTPUnauthorized",
+                "id": "raise-_2Frest_3F_5Fmethod_3DPOST-0-HTTPUnauthorized",
                 "doc": "Authenticated access is required"
               },
               { "type": "HTTPForbidden",
+                "id": "raise-_2Frest_3F_5Fmethod_3DPOST-1-HTTPForbidden",
                 "doc": "The user does not have posting privileges"
               }
             ]
           },
           { "name": "PUT",
+            "id": "method-_2Frest-PUT",
             "doc": "Updates the value."
           }
         ]
       },
       { "name": "method",
+        "id": "endpoint-_2Fsub_2Fmethod",
         "path": "/sub/method",
         "decoratedName": "method",
         "decoratedPath": "/sub/method",
         "doc": "This method outputs a JSON list."
       },
       { "name": "swi",
+        "id": "endpoint-_2Fswi",
         "path": "/swi",
         "decoratedName": "swi",
         "decoratedPath": "/swi",
         "doc": "A sub-controller providing only an index."
       },
       { "name": "unknown",
+        "id": "endpoint-_2Funknown",
         "path": "/unknown",
         "decoratedName": "¿unknown?",
         "decoratedPath": "/¿unknown?",
@@ -775,21 +792,6 @@ application:
   #----------------------------------------------------------------------------
   def test_format_wadl(self):
     'The Describer can emit WADL'
-    class StaticDescribeController(DescribeController):
-      def decorateEntry(self, options, entry):
-        entry = super(StaticDescribeController, self).decorateEntry(options, entry)
-        if not entry or entry.path != '/rest/post':
-          return entry
-        entry.params = (
-          adict(name='size', type='int', default=4096, optional=True, doc='The anticipated maximum size'),
-          adict(name='text', type='str', optional=False, doc='The text content for the posting'),
-          )
-        entry.returns = (adict(type='str', doc='The ID of the new posting'),)
-        entry.raises  = (
-          adict(type='HTTPUnauthorized', doc='Authenticated access is required'),
-          adict(type='HTTPForbidden', doc='The user does not have posting privileges'),
-          )
-        return entry
     root = SimpleRoot()
     root.desc = StaticDescribeController(root, doc='URL tree description.',
                                          override=adict(format='wadl'))
@@ -803,59 +805,59 @@ application:
  xsi:schemaLocation="http://research.sun.com/wadl/2006/10 wadl.xsd"
  >
  <resources base="http://localhost">
-  <resource path="">
+  <resource id="endpoint-_2F" path="">
    <pc:doc>The default root.</pc:doc>
-   <method name="GET"/>
+   <method id="method-_2F-GET" name="GET"/>
   </resource>
-  <resource path="desc">
+  <resource id="endpoint-_2Fdesc" path="desc">
    <pc:doc>URL tree description.</pc:doc>
-   <method name="GET"/>
+   <method id="method-_2Fdesc-GET" name="GET"/>
   </resource>
-  <resource path="rest">
+  <resource id="endpoint-_2Frest" path="rest">
    <pc:doc>A RESTful entry.</pc:doc>
-   <method name="DELETE">
+   <method id="method-_2Frest-DELETE" name="DELETE">
     <pc:doc>Deletes the entry.</pc:doc>
    </method>
-   <method name="GET">
+   <method id="method-_2Frest-GET" name="GET">
     <pc:doc>Gets the current value.</pc:doc>
    </method>
-   <method name="POST">
+   <method id="method-_2Frest-POST" name="POST">
     <pc:doc>Creates a new entry.</pc:doc>
     <request>
-     <param name="size" type="xsd:int" required="false" default="4096">
+     <param id="param-_2Frest_3F_5Fmethod_3DPOST-size" name="size" type="xsd:int" required="false" default="4096">
       <pc:doc>The anticipated maximum size</pc:doc>
      </param>
-     <param name="text" type="xsd:string" required="true">
+     <param id="param-_2Frest_3F_5Fmethod_3DPOST-text" name="text" type="xsd:string" required="true">
       <pc:doc>The text content for the posting</pc:doc>
      </param>
     </request>
     <response>
-     <representation element="xsd:string">
+     <representation id="return-_2Frest_3F_5Fmethod_3DPOST-0-str" element="xsd:string">
       <pc:doc>The ID of the new posting</pc:doc>
      </representation>
-     <fault element="HTTPUnauthorized">
+     <fault id="raise-_2Frest_3F_5Fmethod_3DPOST-0-HTTPUnauthorized" element="HTTPUnauthorized">
       <pc:doc>Authenticated access is required</pc:doc>
      </fault>
-     <fault element="HTTPForbidden">
+     <fault id="raise-_2Frest_3F_5Fmethod_3DPOST-1-HTTPForbidden" element="HTTPForbidden">
       <pc:doc>The user does not have posting privileges</pc:doc>
      </fault>
     </response>
    </method>
-   <method name="PUT">
+   <method id="method-_2Frest-PUT" name="PUT">
     <pc:doc>Updates the value.</pc:doc>
    </method>
   </resource>
-  <resource path="sub/method">
+  <resource id="endpoint-_2Fsub_2Fmethod" path="sub/method">
    <pc:doc>This method outputs a JSON list.</pc:doc>
-   <method name="GET"/>
+   <method id="method-_2Fsub_2Fmethod-GET" name="GET"/>
   </resource>
-  <resource path="swi">
+  <resource id="endpoint-_2Fswi" path="swi">
    <pc:doc>A sub-controller providing only an index.</pc:doc>
-   <method name="GET"/>
+   <method id="method-_2Fswi-GET" name="GET"/>
   </resource>
-  <resource path="unknown">
+  <resource id="endpoint-_2Funknown" path="unknown">
    <pc:doc>A dynamically generated sub-controller.</pc:doc>
-   <method name="GET"/>
+   <method id="method-_2Funknown-GET" name="GET"/>
   </resource>
  </resources>
 </application>

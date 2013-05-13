@@ -19,7 +19,13 @@ HTML, WADL, YAML, or XML descriptor file.
 #       (due to the @index decorator). so, move to something like
 #       Entry.isHandler methinks...
 
-import os, types, re, textwrap, inspect, cgi, json
+# TODO: the format_*() methods return *rendered* data... although there
+#       is clearly some benefit to that, it should be controllable what
+#       renderer gets used, since the caller may have a "better" renderer
+#       for the same type. eg JSON, where the default encoder may not be
+#       able to encode everything...
+
+import os, types, re, textwrap, inspect, cgi, json, binascii
 import xml.etree.ElementTree as ET
 from pyramid.response import Response
 from pyramid.settings import asbool
@@ -120,6 +126,13 @@ def normLines(text, indent=None):
   return text.strip()
 
 #------------------------------------------------------------------------------
+pue_re   = re.compile('[^a-zA-Z0-9]')
+def pue_repl(match):
+  return '_' + binascii.hexlify(match.group(0)).upper()
+def pseudoUrlEncode(text):
+  return pue_re.sub(pue_repl, text)
+
+#------------------------------------------------------------------------------
 class DescribeController(Controller):
   # todo: the docstring for the class was originally the first sentence,
   #       and the full documentation was for the :meth:`index()` method.
@@ -140,6 +153,8 @@ class DescribeController(Controller):
   * `showRest`:      lists supported RESTful methods.
   * `showImpl`:      shows implementation resolver path.
   * `showInfo`:      shows documentation.
+  * `showIds`:       adds link IDs to struct-formats.
+  * `showMethods`:   shows available/documented entrypoint methods.
   * `showDynamic`:   shows presence of dynamically evaluated attributes.
   * `maxdepth`:      limits the number of path components to display.
   * `width`:         the width of text-based output (default: 79).
@@ -354,6 +369,8 @@ class DescribeController(Controller):
       ('showImpl',       False),
       ('showInfo',       True),
       ('showExtra',      True),
+      ('showMethods',    True),
+      ('showIds',        True),
       ('showDynamic',    True),
       ('showGenerator',  True),
       ('showGenVersion', True),
@@ -378,6 +395,10 @@ class DescribeController(Controller):
     options.request    = request
     entries = self._walkEntries(options)
     return getattr(self, 'format_' + options.format)(options, entries)
+
+  #----------------------------------------------------------------------------
+  def _encodeIdComponent(self, text):
+    return pseudoUrlEncode(text)
 
   #----------------------------------------------------------------------------
   def _walkEntries(self, options, entry=None):
@@ -511,6 +532,7 @@ class DescribeController(Controller):
     in rendering the final output. Specifically, the following
     attributes are populated as and if possible:
 
+    * `id`:    a document-unique ID for the entry.
     * `path`:  full path to the entry.
     * `dpath`: the full "decorated" path to the entry.
     * `ipath`: the full resolver path to the class or method.
@@ -579,8 +601,23 @@ class DescribeController(Controller):
     else:
       entry.path  = entry.parent.path
       entry.dpath = entry.parent.dpath
+    if entry.isRest and entry.itype == 'method':
+      # todo: this 'epath' is a hack - see below
+      entry.epath = entry.path
+    # todo: using standard path separator here is probably not a "good" idea...
+    #   entry.path  = entry.path + ':' + entry.name
+    #   entry.dpath = entry.dpath + ':' + entry.dname
+    # else:
     entry.path  = os.path.join(entry.path,  entry.name)
     entry.dpath = os.path.join(entry.dpath, entry.dname)
+
+    # generate an ID
+    if entry.isRest and entry.itype == 'method':
+      # todo: this 'epath' is a hack - see above
+      entry.id = 'method-{}-{}'.format(self._encodeIdComponent(entry.epath),
+                                       self._encodeIdComponent(entry.method or entry.name))
+    else:
+      entry.id = 'endpoint-{}'.format(self._encodeIdComponent(entry.path))
 
     # get the docstring
     if options.showInfo:
@@ -833,26 +870,29 @@ class DescribeController(Controller):
     if entry.params:
       ret += '<h4>Parameters</h4><dl class="params">'
       for param in entry.params:
-        ret += u'<dt>{}</dt><dd><em>{}{}{}</em>{}</dd>'.format(
+        ret += u'<dt id="{}">{}</dt><dd><em>{}{}{}</em>{}</dd>'.format(
+          cgi.escape(param.id),
           cgi.escape(param.name or ''),
           cgi.escape(param.type or ''),
           ', optional' if param.optional else '',
-          ( ', default ' + str(param.default) ) if param.default else '',
+          ( ', default ' + cgi.escape(str(param.default)) ) if param.default else '',
           ( '<br/>' + self.formattext_html(options, param.doc) ) if param.doc else '',
           )
       ret += '</dl>'
     if entry.returns:
       ret += '<h4>Returns</h4><dl class="returns">'
-      for node in entry.returns:
-        ret += u'<dt>{}</dt><dd>{}</dd>'.format(
+      for idx, node in enumerate(entry.returns):
+        ret += u'<dt id="{}">{}</dt><dd>{}</dd>'.format(
+          cgi.escape(node.id),
           cgi.escape(node.type or ''),
           self.formattext_html(options, node.doc) if node.doc else '',
           )
       ret += '</dl>'
     if entry.raises:
       ret += '<h4>Raises</h4><dl class="raises">'
-      for node in entry.raises:
-        ret += u'<dt>{}</dt><dd>{}</dd>'.format(
+      for idx, node in enumerate(entry.raises):
+        ret += u'<dt id="{}">{}</dt><dd>{}</dd>'.format(
+          cgi.escape(node.id),
           cgi.escape(node.type or ''),
           self.formattext_html(options, node.doc) if node.doc else '',
           )
@@ -860,11 +900,64 @@ class DescribeController(Controller):
     if entry.methods:
       ret += '<h3>Supported Methods</h3><dl class="methods">'
       for meth in entry.methods:
-        ret += u'<dt>{}</dt><dd>{}</dd>'.format(
-          meth.method or meth.name or '',
+        ret += u'<dt id="{}">{}</dt><dd>{}</dd>'.format(
+          cgi.escape(meth.id),
+          cgi.escape(meth.method or meth.name or ''),
           self.formatdoc_html(options, meth) or '',
           )
       ret += '</dl>'
+    return ret
+
+  #----------------------------------------------------------------------------
+  def format_html_body(self, options, entries):
+    ret = '''\
+  <h1>Contents of "{path}"</h1>
+  <dl class="endpoints">
+'''.format(path=cgi.escape(self.path))
+    for entry in entries:
+      if entry.isRest and entry.itype == 'method':
+        continue
+      ret += u'<dt id="{}">{}</dt><dd>{}</dd>'.format(
+        cgi.escape(entry.id),
+        cgi.escape(entry.dpath),
+        self.formatdoc_html(options, entry) or '(Undocumented.)')
+    ret += '</dl>'
+    if options.showLegend:
+      ret += '<h3>Legend</h3><dl>'
+      for item, desc in self.legend:
+        ret += u'<dt>{}</dt><dd>{}</dd>'.format(
+          cgi.escape(item),
+          self.formattext_html(options, desc) or '',
+          )
+      ret += '</dl>'
+    return ret
+
+  #----------------------------------------------------------------------------
+  def format_html_doc(self, options, entries, body):
+    '''
+    Generates the containing HTML document for the supplied `body`, which
+    was generated from `entries`.
+    '''
+    ret = u'''\
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+ <head>
+  <title>Contents of "{path}"</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+  <meta name="generator" content="pyramid-controllers/{version}"/>
+  <style type="text/css">
+   dl{{margin-left: 2em;}}
+   dt{{font-weight: bold;}}
+   dd{{margin:0.5em 0 0.75em 2em;}}
+  </style>
+ </head>
+ <body>
+'''.format(path=cgi.escape(self.path), version=getVersion())
+    ret += body
+    ret += '''\
+ </body>
+</html>
+'''
     return ret
 
   #----------------------------------------------------------------------------
@@ -878,44 +971,29 @@ class DescribeController(Controller):
     # todo: use an XSLT stylesheet transform from XML instead?...
     #       or an rST-to-HTML converter?...
     # TODO: i18n...
-    ret = u'''<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
- <head>
-  <title>Contents of "{path}"</title>
-  <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
-  <meta name="generator" content="pyramid-controllers/{version}"/>
-  <style type="text/css">
-   dl{{margin-left: 2em;}}
-   dt{{font-weight: bold;}}
-   dd{{margin:0.5em 0 0.75em 2em;}}
-  </style>
- </head>
- <body>
-  <h1>Contents of "{path}"</h1>
-  <dl class="endpoints">
-'''.format(path=cgi.escape(self.path), version=getVersion())
-    for entry in entries:
-      if entry.isRest and entry.itype == 'method':
-        continue
-      ret += u'<dt>{}</dt><dd>{}</dd>'.format(
-        cgi.escape(entry.dpath),
-        self.formatdoc_html(options, entry) or '(Undocumented.)')
-    ret += '</dl>'
-    if options.showLegend:
-      ret += '<h3>Legend</h3><dl>'
-      for item, desc in self.legend:
-        ret += u'<dt>{}</dt><dd>{}</dd>'.format(
-          cgi.escape(item),
-          self.formattext_html(options, desc) or '',
-          )
-      ret += '</dl>'
-    ret += '''
- </body>
-</html>
-'''
-    resp = Response(ret, content_type='text/html')
+    body = self.format_html_body(options, entries)
+    html = self.format_html_doc(options, entries, body)
+    resp = Response(html, content_type='text/html')
     resp.charset = 'UTF-8'
     return resp
+
+  #----------------------------------------------------------------------------
+  def _pick_param(self, options, value):
+    if options.showIds:
+      return pick(value, 'id', 'name', 'type', 'optional', 'default', 'doc')
+    return pick(value, 'name', 'type', 'optional', 'default', 'doc')
+
+  #----------------------------------------------------------------------------
+  def _pick_return(self, options, value):
+    if options.showIds:
+      return pick(value, 'id', 'type', 'doc')
+    return pick(value, 'type', 'doc')
+
+  #----------------------------------------------------------------------------
+  def _pick_raise(self, options, value):
+    if options.showIds:
+      return pick(value, 'id', 'type', 'doc')
+    return pick(value, 'type', 'doc')
 
   #----------------------------------------------------------------------------
   def _xentry(self, options, entry, xentry):
@@ -925,31 +1003,31 @@ class DescribeController(Controller):
         ET.SubElement(
           xpars, 'param',
           **{k: str(v) for k, v in
-             pick(param, 'name', 'type', 'optional', 'default', 'doc').items()})
+             self._pick_param(options, param).items()})
     if entry.returns is not None:
       xrets = ET.SubElement(xentry, 'returns')
       for ret in entry.returns:
         ET.SubElement(
           xrets, 'return',
-          **{k: str(v) for k, v in pick(ret, 'type', 'doc').items()})
+          **{k: str(v) for k, v in self._pick_return(options, ret).items()})
     if entry.raises is not None:
       xrzs = ET.SubElement(xentry, 'raises')
       for rz in entry.raises:
         x = ET.SubElement(
           xrzs, 'raise',
-          **{k: str(v) for k, v in pick(rz, 'type', 'doc').items()})
+          **{k: str(v) for k, v in self._pick_raise(options, rz).items()})
     return xentry
 
   #----------------------------------------------------------------------------
   def _dentry(self, options, entry, dentry, dict=dict):
     if entry.params is not None:
       dentry['params'] = [
-        dict(pick(e, 'name', 'type', 'optional', 'default', 'doc'))
+        dict(self._pick_param(options, e))
         for e in entry.params]
     if entry.returns is not None:
-      dentry['returns'] = [dict(pick(e, 'type', 'doc')) for e in entry.returns]
+      dentry['returns'] = [dict(self._pick_return(options, e)) for e in entry.returns]
     if entry.raises is not None:
-      dentry['raises'] = [dict(pick(e, 'type', 'doc')) for e in entry.raises]
+      dentry['raises'] = [dict(self._pick_raise(options, e)) for e in entry.raises]
     if options.showExtra and entry.extra:
       try:
         for k, v in entry.extra.items():
@@ -979,6 +1057,7 @@ class DescribeController(Controller):
         endpoints:
 
           - endpoint:
+              id: endpoint-L3BhdGgvdG8vb3BlcmF0aW9u
               name: operation
               path: /path/to/operation
               decorated-name: operation
@@ -989,6 +1068,7 @@ class DescribeController(Controller):
 
                 - method:
 
+                    id: method-_2Fpath_2Fto_2Foperation-GET
                     name: GET
 
                     # not currently provided by the default
@@ -997,6 +1077,7 @@ class DescribeController(Controller):
 
                     params:
                       - param:
+                          id: param-_2Fpath_2Fto_2Foperation_3F_5Fmethod_3DGET-size
                           name: size
                           type: int
                           optional: True
@@ -1005,11 +1086,13 @@ class DescribeController(Controller):
 
                     returns:
                       - return:
+                          id: return-_2Fpath_2Fto_2Foperation_3F_5Fmethod_3DGET-0-int
                           type: int
                           doc: the evaluated value
 
                     raises:
                       - raise:
+                          id: raise-_2Fpath_2Fto_2Foperation_3F_5Fmethod_3DGET-0-TypeError
                           type: TypeError
                           doc: when `size` is not an int
 
@@ -1024,25 +1107,36 @@ class DescribeController(Controller):
 
       xent = ET.SubElement(xents, 'endpoint')
       xent.entry = entry
-      xent.set('name', entry.name)
+      if options.showIds:
+        xent.set('id', entry.id)
       xent.set('path', entry.path)
-      xent.set('decorated-name', entry.dname)
-      xent.set('decorated-path', entry.dpath)
+      if options.showExtra:
+        xent.set('name', entry.name)
+        xent.set('decorated-name', entry.dname)
+        xent.set('decorated-path', entry.dpath)
 
       if entry.doc:
         ET.SubElement(xent, 'doc').text = entry.doc
 
-      if entry.methods:
-        for meth in entry.methods:
-          xmeth = ET.SubElement(xent, 'method', name=meth.method)
-          if meth.doc:
-            ET.SubElement(xmeth, 'doc').text = meth.doc
-          xmeth.entry = meth
-          self._xentry(options, meth, xmeth)
-      else:
-        xmeth = ET.SubElement(xent, 'method', name='GET')
-        xmeth.entry = entry
-        self._xentry(options, entry, xmeth)
+      if options.showMethods:
+        if entry.methods:
+          for meth in entry.methods:
+            xmeth = ET.SubElement(xent, 'method', name=meth.method)
+            if meth.doc:
+              ET.SubElement(xmeth, 'doc').text = meth.doc
+            if options.showIds:
+              xmeth.set('id', meth.id)
+            xmeth.entry = meth
+            self._xentry(options, meth, xmeth)
+        else:
+          # TODO: this is the wrong place to insert the "implicit GET method"...
+          #       once the entry generator does that, then the weirdness of
+          #       generating the ID here will go away...
+          xmeth = ET.SubElement(xent, 'method', name='GET')
+          xmeth.entry = entry
+          if options.showIds:
+            xmeth.set('id', entry.id.replace('endpoint-', 'method-') + '-GET')
+          self._xentry(options, entry, xmeth)
 
     return root
 
@@ -1161,20 +1255,23 @@ class DescribeController(Controller):
     for entry in entries:
       if entry.isRest and entry.itype == 'method':
         continue
-      endpoint = dict(
-        name          = entry.name,
-        path          = entry.path,
-        decoratedName = entry.dname,
-        decoratedPath = entry.dpath,
-        )
+      endpoint = dict(path=entry.path)
+      if options.showIds:
+        endpoint['id'] = entry.id
+      if options.showExtra:
+        endpoint['name']          = entry.name
+        endpoint['decoratedName'] = entry.dname
+        endpoint['decoratedPath'] = entry.dpath
       if includeEntry:
         endpoint['entry'] = entry
       if entry.doc:
         endpoint['doc'] = entry.doc
-      if entry.methods:
+      if options.showMethods and entry.methods:
         endpoint['methods'] = []
         for meth in entry.methods:
           dmeth = dict(name=meth.method)
+          if options.showIds and meth.id:
+            dmeth['id'] = meth.id
           if meth.doc:
             dmeth['doc'] = meth.doc
           if includeEntry:

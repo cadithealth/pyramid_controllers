@@ -78,7 +78,7 @@ class SimpleRoot(Controller):
 class StaticDescribeController(DescribeController):
   def decorateEntry(self, options, entry):
     entry = super(StaticDescribeController, self).decorateEntry(options, entry)
-    if not entry or entry.path != '/rest/post':
+    if not entry or entry.path != '/rest?_method=POST':
       return entry
     entry.params = (
       adict(id='param-_2Frest_3F_5Fmethod_3DPOST-size', name='size', type='int', default=4096, optional=True, doc='The anticipated maximum size'),

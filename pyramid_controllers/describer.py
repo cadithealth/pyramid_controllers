@@ -25,7 +25,7 @@ HTML, WADL, YAML, or XML descriptor file.
 #       for the same type. eg JSON, where the default encoder may not be
 #       able to encode everything...
 
-import os, types, re, textwrap, inspect, cgi, json, binascii
+import os, types, re, textwrap, inspect, cgi, urllib, json, binascii
 import xml.etree.ElementTree as ET
 from pyramid.response import Response
 from pyramid.settings import asbool
@@ -602,20 +602,17 @@ class DescribeController(Controller):
       entry.path  = entry.parent.path
       entry.dpath = entry.parent.dpath
     if entry.isRest and entry.itype == 'method':
-      # todo: this 'epath' is a hack - see below
-      entry.epath = entry.path
-    # todo: using standard path separator here is probably not a "good" idea...
-    #   entry.path  = entry.path + ':' + entry.name
-    #   entry.dpath = entry.dpath + ':' + entry.dname
-    # else:
-    entry.path  = os.path.join(entry.path,  entry.name)
-    entry.dpath = os.path.join(entry.dpath, entry.dname)
+      entry.path  = entry.path + '?_method=' + urllib.quote(entry.method or entry.name)
+      entry.dpath = entry.dpath + '?_method=' + urllib.quote(entry.method or entry.name)
+    else:
+      entry.path  = os.path.join(entry.path,  entry.name)
+      entry.dpath = os.path.join(entry.dpath, entry.dname)
 
     # generate an ID
     if entry.isRest and entry.itype == 'method':
-      # todo: this 'epath' is a hack - see above
-      entry.id = 'method-{}-{}'.format(self._encodeIdComponent(entry.epath),
-                                       self._encodeIdComponent(entry.method or entry.name))
+      entry.id = 'method-{}-{}'.format(
+        self._encodeIdComponent(entry.path[:entry.path.find('?_method=')]),
+        self._encodeIdComponent(entry.method or entry.name))
     else:
       entry.id = 'endpoint-{}'.format(self._encodeIdComponent(entry.path))
 

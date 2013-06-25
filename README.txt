@@ -66,7 +66,7 @@ class RootController(Controller):
 # and hook it all into pyramid in the app's main()
 def main(global_config, **settings):
   # ... (the usual pyramid startup calls) ...
-  config.include('pyramid-controllers')
+  config.include('pyramid_controllers')
   config.add_controller('root', '/', RootController())
 ```
 
@@ -87,7 +87,7 @@ a ``python setup.py develop``.
 Then, enable the package either in your INI file via:
 
 ```
-pyramid.includes = pyramid-controllers
+pyramid.includes = pyramid_controllers
 ```
 
 or in code in your package's application initialization via:
@@ -95,7 +95,7 @@ or in code in your package's application initialization via:
 ``` python
 def main(global_config, **settings):
   # ...
-  config.include('pyramid-controllers')
+  config.include('pyramid_controllers')
   # ...
 ```
 

@@ -85,3 +85,10 @@
 
 - REST controllers do not limit direct access (e.g. "PUT /object" and
   "GET /object/put") invoke the same handler... is that ok?
+
+- REST controllers should allow easy method aliasing, eg:
+
+  class C(RestController):
+    @expose(name=('put', 'post'))
+    def put(self, request):
+      # ...

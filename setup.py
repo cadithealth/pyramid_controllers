@@ -74,6 +74,8 @@ setup(
   description           = 'A pyramid plugin that provides de-centralized hierarchical object dispatch.',
   long_description      = README,
   classifiers           = [
+    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
     'Programming Language :: Python',
     'Framework :: Pyramid',

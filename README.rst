@@ -84,7 +84,7 @@ You can manually install it by running:
   $ pip install pyramid-controllers
 
 However, a better approach is to use standard python distribution
-utilities, and add pyramid_controllers as a dependency in your
+utilities, and add pyramid_controllers as a dependency to your
 project's `install_requires` parameter in your ``setup.py``. Then run
 a ``python setup.py develop``.
 
@@ -94,7 +94,7 @@ Then, enable the package either in your INI file via:
 
   pyramid.includes = pyramid_controllers
 
-or in code in your package's application initialization via:
+or with code in your package's application initialization via:
 
 .. code-block:: python
 

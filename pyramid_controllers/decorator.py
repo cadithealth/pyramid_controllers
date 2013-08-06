@@ -73,14 +73,15 @@ def makeDecorator(klass, doc=None):
 expose = makeDecorator(ExposeDecorator, doc='''\
 
   Decorates a :class:`Controller` method to indicate that it can be
-  invoked and traversed by the request dispatcher. Accepts the
-  following optional parameters:
+  invoked and traversed by the request dispatcher.
 
-  :param renderer:
+  :Parameters:
+
+  renderer : str, optional
 
     Specifies the renderer to use.
 
-  :param name:
+  name : { str, list(str) }, optional
 
     Specifies the name or list of names that this method exposes for
     dispatch. This is typically used when the external URL comprises
@@ -88,7 +89,7 @@ expose = makeDecorator(ExposeDecorator, doc='''\
     if this option is used, then the normal method name itself will no
     longer be exposed unless explicitly listed.
 
-  :param ext:
+  ext : { str, list(str) }, optional
 
     Specifies the extension or list of extensions that this method
     must be appended to for dispatch. This is typically used to
@@ -121,9 +122,11 @@ index = makeDecorator(IndexDecorator, doc='''\
 
   Decorates a :class:`Controller` method to indicate that it will
   handle requests that resolve to the controller, but do not have any
-  further path arguments. Accepts the following optional parameters:
+  further path arguments.
 
-  :param forceSlash:
+  :Parameters:
+
+  forceSlash : bool, default true, optional
 
     Boolean that controls whether or not an index request that does
     not have a trailing slash ("/") should be 302 redirected to a
@@ -132,7 +135,7 @@ index = makeDecorator(IndexDecorator, doc='''\
     effect for the current request (which, by default, is set to
     true).
 
-  :param renderer:
+  renderer : str, optional
 
     Specifies the renderer to use.
 
@@ -165,10 +168,11 @@ default = makeDecorator(DefaultDecorator, doc='''\
   handler is passed the standard `request` parameter, and then all of
   the remaining path components as positional arguments, and is
   expected to complete the handling of the request - i.e. to generate
-  a response. The ``@default`` decorator accepts the following
-  optional parameters:
+  a response.
 
-  :param renderer:
+  :Parameters:
+
+  renderer : str, optional
 
     Specifies the renderer to use.
 
@@ -355,14 +359,15 @@ def expose_defaults(*args, **kw):
       def html(self, request):
         return dict(people=self.people(request), types=self.types(request))
 
-  Currently, the following parameters can be used in @expose_defaults:
 
-  :param renderer:
+  :Parameters:
+
+  renderer : str, optional
 
     any @index, @default, and @expose decorated methods that do not
     have a pre-existing `renderer` definition will inherit this value.
 
-  :param ext:
+  ext : { str, list(str) }, optional
 
     any @expose decorated methods that have neither a `name` or an
     `ext` definition will inherit this value.

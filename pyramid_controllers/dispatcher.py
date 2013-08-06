@@ -61,14 +61,16 @@ class Dispatcher(object):
     Creates a new Dispatcher for controller hierarchy traversal and
     request dispatching. Accepts the following parameters:
 
-    :param defaultForceSlash:
+    :Parameters:
+
+    defaultForceSlash : bool, default true, optional
 
       Set the default value of @index's `forceSlash` parameter, which
       defaults to ``True``, i.e. index requests that do not have a
       trailing slash (``/``) will receive a 302 redirect with the
       slash appended.
 
-    :param autoDecorate:
+    autoDecorate : bool, default true, optional
 
       Primarily for internal purposes -- when set to truthy (the
       default), the result of doing a controller exposure instance

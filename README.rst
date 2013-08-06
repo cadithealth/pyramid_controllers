@@ -255,10 +255,10 @@ package that influence how a request is handled, as follows:
 * **@fiddle**: a method declared as a "fiddler" will be called before
   any other method in the given controller and is expected to do
   nothing more than alter the request in some way (such as add
-  additional attributes) or throw an exception. A fiddler method must
-  **NOT** actually respond to a request via standard methods, however
-  it can raise exceptions (such as ``HTTPForbidden``), which will
-  terminate request dispatching.
+  additional attributes) or throw an exception. A fiddler method
+  **MUST NOT** actually respond to a request via standard methods,
+  however it can raise exceptions (such as ``HTTPForbidden``), which
+  will terminate request dispatching.
 
 * **@expose_defaults**: a Controller class decorator that sets default
   parameters for @expose, @index, and @default methods, such as the

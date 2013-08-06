@@ -114,6 +114,21 @@ class TestDispatcher(TestHelper):
         return dict(foo='bar')
     self.assertResponse(self.send(Root(), '/'), 200, "{'foo': 'bar'}")
 
+  def test_index_method(self):
+    '@index can restrict which methods are allowed'
+    class Root(Controller):
+      @index(method='GET')
+      def index_get(self, request):
+        return 'method is GET'
+      @index(method=['put', 'post'])
+      def index_put(self, request):
+        return 'method is %s (PorP)' % (request.method,)
+    self.assertResponse(self.send(Root(), '/'), 200, 'method is GET')
+    self.assertResponse(self.send(Root(), '/', method='PUT'), 200, 'method is PUT (PorP)')
+    self.assertResponse(self.send(Root(), '/', method='POST'), 200, 'method is POST (PorP)')
+    # TODO: this should return a 405...
+    self.assertResponse(self.send(Root(), '/', method='DELETE'), 404)
+
   #----------------------------------------------------------------------------
   # TEST @EXPOSE
   #----------------------------------------------------------------------------
@@ -166,6 +181,21 @@ class TestDispatcher(TestHelper):
       def method(self, request):
         return dict(foo='bar')
     self.assertResponse(self.send(Root(), '/method'), 200, "{'foo': 'bar'}")
+
+  def test_expose_method(self):
+    '@expose can restrict which methods are allowed'
+    class Root(Controller):
+      @expose(name='res', method='GET')
+      def resource_get(self, request):
+        return 'res with GET'
+      @expose(name='res', method=['put', 'post'])
+      def resource_put(self, request):
+        return 'res with %s (PorP)' % (request.method,)
+    self.assertResponse(self.send(Root(), '/res'), 200, 'res with GET')
+    self.assertResponse(self.send(Root(), '/res', method='PUT'), 200, 'res with PUT (PorP)')
+    self.assertResponse(self.send(Root(), '/res', method='POST'), 200, 'res with POST (PorP)')
+    # TODO: this should return a 405...
+    self.assertResponse(self.send(Root(), '/res', method='DELETE'), 404)
 
   #----------------------------------------------------------------------------
   # TEST @EXPOSE ALIASING
@@ -377,6 +407,21 @@ class TestDispatcher(TestHelper):
       def index(self, request, curpath, *remainder):
         return dict(args=[curpath, list(remainder)])
     self.assertResponse(self.send(Root(), '/zag/zig/zog'), 200, "{'args': ['zag', ['zig', 'zog']]}")
+
+  def test_default_method(self):
+    '@default can restrict which methods are allowed'
+    class Root(Controller):
+      @default(method='GET')
+      def default_get(self, request, path, *rem):
+        return 'default GET'
+      @default(method=['put', 'post'])
+      def default_put(self, request, path, *rem):
+        return 'default %s (PorP)' % (request.method,)
+    self.assertResponse(self.send(Root(), '/res'), 200, 'default GET')
+    self.assertResponse(self.send(Root(), '/res', method='PUT'), 200, 'default PUT (PorP)')
+    self.assertResponse(self.send(Root(), '/res', method='POST'), 200, 'default POST (PorP)')
+    # TODO: this should return a 405...
+    self.assertResponse(self.send(Root(), '/res', method='DELETE'), 404)
 
   #----------------------------------------------------------------------------
   # TEST CUSTOM DISPATCHER

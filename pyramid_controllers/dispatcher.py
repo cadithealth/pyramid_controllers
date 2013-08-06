@@ -140,6 +140,9 @@ class Dispatcher(object):
     if dectype == 'expose':
       if spec.name and remainder[0] not in spec.name:
         return None
+    if dectype in ('expose', 'index', 'default'):
+      if spec.method and request.method not in spec.method:
+        return None
     if response:
       if spec.renderer is None:
         return None

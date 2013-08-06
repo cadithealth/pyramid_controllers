@@ -92,3 +92,8 @@
     @expose(name=('put', 'post'))
     def put(self, request):
       # ...
+
+- when using @expose, @index or @default with the `method` parameter,
+  the response is a '404 not found' if the method does not match. this
+  should really be a '405 method not allowed' IFF all attributes
+  match *except* method...

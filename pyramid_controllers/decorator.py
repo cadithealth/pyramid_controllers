@@ -35,6 +35,10 @@ class Decorator(object):
     self.enhance(wrapped, getattr(wrapped, PCATTR), self.kw)
     return wrapped
   def enhance(self, wrapped, decoration, kw):
+    if kw.method:
+      if isstr(kw.method):
+        kw.method = [kw.method]
+      kw.method = set([e.upper() for e in kw.method])
     getattr(decoration, self.attribute).append(kw)
 
 #------------------------------------------------------------------------------
@@ -98,6 +102,13 @@ expose = makeDecorator(ExposeDecorator, doc='''\
     bare method name itself will no longer be exposed unless
     explicitly listed.
 
+  method : { str, list(str) }, optional
+
+    Specifies which HTTP methods this handler should be invoked for.
+    If not specified, defaults to any method. Note that this does not
+    modify bindings provided by the RestController, so this parameter
+    should typically not be used on subclasses of RestController.
+
   Examples::
 
     class MyController(Controller):
@@ -139,6 +150,13 @@ index = makeDecorator(IndexDecorator, doc='''\
 
     Specifies the renderer to use.
 
+  method : { str, list(str) }, optional
+
+    Specifies which HTTP methods this handler should be invoked for.
+    If not specified, defaults to any method. Note that this does not
+    modify bindings provided by the RestController, so this parameter
+    should typically not be used on subclasses of RestController.
+
   Examples::
 
     class SubController(Controller):
@@ -175,6 +193,13 @@ default = makeDecorator(DefaultDecorator, doc='''\
   renderer : str, optional
 
     Specifies the renderer to use.
+
+  method : { str, list(str) }, optional
+
+    Specifies which HTTP methods this handler should be invoked for.
+    If not specified, defaults to any method. Note that this does not
+    modify bindings provided by the RestController, so this parameter
+    should typically not be used on subclasses of RestController.
 
   Examples::
 
@@ -304,15 +329,21 @@ class ClassDecoration(object):
     self.meta     = None
   def apply(self, wrapped):
     for defs in reversed(self.defaults):
+      # todo: this `defs.method` rewrite should really be handled only by
+      #       the Decoration class (instead of replicating here...)
+      if defs.method:
+        if isstr(defs.method):
+          defs.method = [defs.method]
+        defs.method = set([e.upper() for e in defs.method])
       for name, attr in inspect.getmembers(wrapped):
         apc = getattr(attr, PCATTR, None)
         if not apc:
           continue
         for dectype in ('expose', 'index', 'default'):
           for spec in getattr(apc, dectype, []):
-            if 'renderer' in defs:
-              if 'renderer' not in spec:
-                spec.renderer = defs.renderer
+            for decattr in ('renderer', 'method'):
+              if decattr in defs and decattr not in spec:
+                setattr(spec, decattr, getattr(defs, decattr))
         for dectype in ('expose',):
           for spec in getattr(apc, dectype, []):
             if 'ext' in defs:
@@ -321,6 +352,7 @@ class ClassDecoration(object):
                   spec.name = [name + '.' + defs.ext]
                 else:
                   spec.name = [name + '.' + e for e in defs.ext]
+
 
 #------------------------------------------------------------------------------
 class ExposeDefaultsDecorator(object):
@@ -371,6 +403,11 @@ def expose_defaults(*args, **kw):
 
     any @expose decorated methods that have neither a `name` or an
     `ext` definition will inherit this value.
+
+  method : { str, list(str) }, optional
+
+    any @index, @default, and @expose decorated methods that do not
+    have a pre-existing `method` definition will inherit this value.
 
   '''
   if len(args) == 1 and len(kw) == 0 and type(args[0]) == types.FunctionType:

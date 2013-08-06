@@ -16,44 +16,7 @@ assert(sys.version_info[0] > 2
        and sys.version_info[1] >= 7)
 
 here = os.path.abspath(os.path.dirname(__file__))
-try:
-  README = open(os.path.join(here, 'README.txt')).read()
-except IOError:
-  README = ''
-
-#------------------------------------------------------------------------------
-# ugh. why couldn't github just have supported rst??? ignats.
-#------------------------------------------------------------------------------
-mdheader = re.compile('^(#+) (.*)$', flags=re.MULTILINE)
-mdlevels = '=-~+"\''
-def hdrepl(match):
-  lvl = len(match.group(1)) - 1
-  if lvl < 0:
-    lvl = 0
-  if lvl >= len(mdlevels):
-    lvl = len(mdlevels) - 1
-  ret = match.group(2).strip()
-  return ret + '\n' + ( mdlevels[lvl] * len(ret) ) + '\n'
-#------------------------------------------------------------------------------
-mdquote = re.compile('^```( python)?\n(.*?)\n```\n', flags=re.MULTILINE|re.DOTALL)
-def qtrepl(match):
-  if match.group(1) == ' python':
-    ret = '.. code-block:: python\n'
-  else:
-    ret = '::\n'
-  for line in match.group(2).split('\n'):
-    if len(line.strip()) <= 0:
-      ret += '\n'
-    else:
-      ret += '\n  ' + line
-  return ret + '\n'
-#------------------------------------------------------------------------------
-def md2rst(text):
-  text = mdquote.sub(qtrepl, text)
-  text = mdheader.sub(hdrepl, text)
-  return text
-#------------------------------------------------------------------------------
-README = md2rst(README)
+README = open(os.path.join(here, 'README.rst')).read()
 
 test_requires = [
   'nose                 >= 1.2.1',

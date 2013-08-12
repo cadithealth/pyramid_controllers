@@ -97,3 +97,5 @@
   the response is a '404 not found' if the method does not match. this
   should really be a '405 method not allowed' IFF all attributes
   match *except* method...
+
+- update DescribeController to inspect decorator `method` parameters

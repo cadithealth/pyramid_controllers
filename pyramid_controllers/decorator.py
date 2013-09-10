@@ -47,15 +47,14 @@ class ExposeDecorator(Decorator):
   def enhance(self, wrapped, decoration, kw):
     if kw.name and isstr(kw.name):
       kw.name = [kw.name]
-    if kw.ext:
-      if kw.name:
-        raise ValueError('@expose collision: "ext" and "name" are mutually exclusive')
-      kw = adict(kw)
-      if isstr(kw.ext):
-        kw.name = [wrapped.__name__ + '.' + kw.ext]
-      else:
-        kw.name = [wrapped.__name__ + '.' + e for e in kw.ext]
-      del kw.ext
+    if 'ext' in kw:
+      if not kw.name:
+        kw.name = [wrapped.__name__]
+      if kw.ext is None or isstr(kw.ext):
+        kw.ext = [kw.ext]
+      kw.name = [(name + '.' + ext if ext is not None else name)
+                 for name in kw.name for ext in kw.ext]
+      # del kw.ext
     super(ExposeDecorator, self).enhance(wrapped, decoration, kw)
 
 #------------------------------------------------------------------------------
@@ -67,6 +66,8 @@ class DefaultDecorator(Decorator): attribute = 'default'
 #------------------------------------------------------------------------------
 def makeDecorator(klass, doc=None):
   def decorator(*args, **kw):
+    # todo: is this really the best way to determine if the decorator
+    #       was called? i.e. @index vs. @index(...)
     if len(args) == 1 and len(kw) == 0 and type(args[0]) == types.FunctionType:
       return klass()(args[0])
     return klass(*args, **kw)
@@ -98,9 +99,13 @@ expose = makeDecorator(ExposeDecorator, doc='''\
     Specifies the extension or list of extensions that this method
     must be appended to for dispatch. This is typically used to
     associate different renderers for different extensions. Note that
-    this option cannot be used in conjunction with `name` and that the
-    bare method name itself will no longer be exposed unless
-    explicitly listed.
+    this option can be used in conjunction with `name`, in which case
+    the URLs under which this method is exposed is the product of all
+    names appended with each extension. If an extension list is
+    ``None``, then that is equivalent to not having an extension
+    (which is useful for overriding a `expose_defaults`). As with the
+    `name` parameter, the bare method name itself will no longer be
+    exposed unless explicitly listed.
 
   method : { str, list(str) }, optional
 
@@ -335,6 +340,9 @@ class ClassDecoration(object):
         if isstr(defs.method):
           defs.method = [defs.method]
         defs.method = set([e.upper() for e in defs.method])
+      if 'ext' in defs:
+        if defs.ext is None or isstr(defs.ext):
+          defs.ext = [defs.ext]
       for name, attr in inspect.getmembers(wrapped):
         apc = getattr(attr, PCATTR, None)
         if not apc:
@@ -346,13 +354,14 @@ class ClassDecoration(object):
                 setattr(spec, decattr, getattr(defs, decattr))
         for dectype in ('expose',):
           for spec in getattr(apc, dectype, []):
-            if 'ext' in defs:
-              if 'name' not in spec and 'ext' not in spec:
-                if isstr(defs.ext):
-                  spec.name = [name + '.' + defs.ext]
-                else:
-                  spec.name = [name + '.' + e for e in defs.ext]
-
+            if 'ext' in defs and 'ext' not in spec:
+              names = spec.name if 'name' in spec else [name]
+              spec.name = [name + '.' + e if e is not None else name
+                           for e in defs.ext
+                           for name in names]
+              # note: setting spec.ext to indicate that extensions have
+              #       already been applied...
+              spec.ext = defs.ext
 
 #------------------------------------------------------------------------------
 class ExposeDefaultsDecorator(object):

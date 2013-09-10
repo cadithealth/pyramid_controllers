@@ -22,6 +22,7 @@ from pyramid_controllers import \
     includeme, \
     Controller, Dispatcher, \
     expose, index, lookup, default, fiddle, expose_defaults
+from pyramid_controllers.decorator import PCATTR
 from .test_helpers import TestHelper
 
 #------------------------------------------------------------------------------
@@ -240,13 +241,6 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Ext(), '/style.css'),  200, 'COMPILED:ok.name.style')
     self.assertResponse(self.send(Ext(), '/style'),      404)
 
-  def test_expose_name_and_ext_collision(self):
-    '@expose parameters "ext" and "name" are mutually exclusive'
-    with self.assertRaises(ValueError):
-      class Bad(Controller):
-        @expose(name='foo', ext='css')
-        def method(self, request): pass
-
   def test_expose_ext_list(self):
     '@expose parameters "ext" and "name" can accept lists'
     class Ext(Controller):
@@ -259,6 +253,23 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Ext(), '/foo'),     200, 'ok.name:/foo')
     self.assertResponse(self.send(Ext(), '/bar'),     200, 'ok.name:/bar')
     self.assertResponse(self.send(Ext(), '/name'),    404)
+
+  def test_expose_name_and_ext_are_combinative(self):
+    '@expose parameters "ext" and "name" are combinative'
+    class Ext(Controller):
+      @expose(name=('ver', 'rev'), ext=('txt', 'rst'))
+      def handler(self, request): return 'ok.path:' + request.path
+    # note: this is violating the abstraction barrier... oh well. testing
+    #       the i-rep!... :)
+    self.assertEqual(
+      sorted(getattr(Ext().handler, PCATTR).expose[0]['name']),
+      sorted(['ver.txt', 'ver.rst', 'rev.txt', 'rev.rst']))
+    self.assertResponse(self.send(Ext(), '/ver.txt'), 200, 'ok.path:/ver.txt')
+    self.assertResponse(self.send(Ext(), '/ver.rst'), 200, 'ok.path:/ver.rst')
+    self.assertResponse(self.send(Ext(), '/rev.txt'), 200, 'ok.path:/rev.txt')
+    self.assertResponse(self.send(Ext(), '/rev.rst'), 200, 'ok.path:/rev.rst')
+    self.assertResponse(self.send(Ext(), '/rev'),     404)
+    self.assertResponse(self.send(Ext(), '/ver'),     404)
 
   #----------------------------------------------------------------------------
   # TEST @FIDDLE
@@ -539,7 +550,7 @@ class TestDispatcher(TestHelper):
       def bar(self, request): return 'bar'
       @expose(ext='js')
       def zag(self, request): return 'zag'
-      @expose(name='zig.css')
+      @expose(name='zig.css', ext=None)
       def zig(self, request): return 'zig'
       @expose(ext=None)
       def zog(self, request): return 'zog'
@@ -606,10 +617,28 @@ class TestDispatcher(TestHelper):
       def foo(self, request): return 'foo'
       @expose(ext=None)
       def bar(self, request): return 'bar'
+      @expose(ext=(None, 'txt'))
+      def zig(self, request): return 'zig:' + request.path
     self.assertResponse(self.send(Root(), '/foo.json'), 200, 'foo')
     self.assertResponse(self.send(Root(), '/foo'),      404)
     self.assertResponse(self.send(Root(), '/bar'),      200, 'bar')
     self.assertResponse(self.send(Root(), '/bar.json'), 404)
+    self.assertResponse(self.send(Root(), '/zig'),      200, 'zig:/zig')
+    self.assertResponse(self.send(Root(), '/zig.txt'),  200, 'zig:/zig.txt')
+    self.assertResponse(self.send(Root(), '/zig.json'), 404)
+
+  def test_expose_defaults_with_multiple_names(self):
+    @expose_defaults(ext=('json', 'yaml'))
+    class Root(Controller):
+      @expose(name=('blue', 'moon'))
+      def foo(self, request): return 'path:' + request.path
+    self.assertEqual(
+      sorted(getattr(Root().foo, PCATTR).expose[0]['name']),
+      sorted(['blue.json', 'blue.yaml', 'moon.json', 'moon.yaml']))
+    self.assertResponse(self.send(Root(), '/blue.html'), 404)
+    self.assertResponse(self.send(Root(), '/blue'),      404)
+    self.assertResponse(self.send(Root(), '/blue.json'), 200, 'path:/blue.json')
+    self.assertResponse(self.send(Root(), '/blue.yaml'), 200, 'path:/blue.yaml')
 
 #------------------------------------------------------------------------------
 # end of $Id$

@@ -8,7 +8,7 @@
 # copy: (C) Copyright 2012 Cadit Inc., see LICENSE.txt
 #------------------------------------------------------------------------------
 
-import types, inspect
+import types, inspect, new
 from .util import adict, isstr
 
 PCATTR = '__pyramid_controllers__'
@@ -30,9 +30,23 @@ class Decorator(object):
   def __init__(self, **kw):
     self.kw = adict(kw)
   def __call__(self, wrapped):
+    bind = None
+    if isinstance(wrapped, types.MethodType):
+      # ok, this is a bit annoying. basically, python does not allow
+      # instance methods to have their own attributes, so i need to
+      # create a new function, attach my attributes there, and re-bind
+      # the function... ugh.
+      # TODO: this is not PY3 safe...
+      bind = wrapped
+      func = wrapped.im_func
+      wrapped = new.function(func.func_code, func.func_globals, func.func_name,
+                             func.func_defaults, func.func_closure)
     if not hasattr(wrapped, PCATTR):
       setattr(wrapped, PCATTR, MethodDecoration())
     self.enhance(wrapped, getattr(wrapped, PCATTR), self.kw)
+    if bind:
+      # TODO: this is not PY3 safe...
+      wrapped = new.instancemethod(wrapped, bind.im_self, bind.im_class)
     return wrapped
   def enhance(self, wrapped, decoration, kw):
     if kw.method:

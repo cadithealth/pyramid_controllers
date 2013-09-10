@@ -198,6 +198,22 @@ class TestDispatcher(TestHelper):
     # TODO: this should return a 405...
     self.assertResponse(self.send(Root(), '/res', method='DELETE'), 404)
 
+  def test_expose_on_bound_method(self):
+    '@expose on a bound method'
+    class Ext(Controller):
+      def __init__(self, name):
+        super(Ext, self).__init__()
+        self.foo  = expose(name=name + '.txt')(self.foo)
+      def foo(self, request): return 'ok.path:' + request.path
+    bar = Ext('bar')
+    zig = Ext('zig')
+    self.assertResponse(self.send(bar, '/foo'),     404)
+    self.assertResponse(self.send(zig, '/foo'),     404)
+    self.assertResponse(self.send(bar, '/bar.txt'), 200, 'ok.path:/bar.txt')
+    self.assertResponse(self.send(zig, '/bar.txt'), 404)
+    self.assertResponse(self.send(bar, '/zig.txt'), 404)
+    self.assertResponse(self.send(zig, '/zig.txt'), 200, 'ok.path:/zig.txt')
+
   #----------------------------------------------------------------------------
   # TEST @EXPOSE ALIASING
   #----------------------------------------------------------------------------

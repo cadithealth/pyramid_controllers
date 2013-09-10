@@ -237,11 +237,12 @@ package that influence how a request is handled, as follows:
   exist. Think of this as the ``index.html`` in an htdocs directory.
 
 * **@default**: if the standard component traversal strategy fails to
-  match either a sub-controller or method to handle a request, then
-  the framework searches for a method that has been decorated as a
-  ``@default`` or ``@lookup`` method (``@lookup`` decorators take
-  precedence). The default method is expected to behave identically to
-  an "exposed" method in that it should respond to the request.
+  match either a sub-controller or an exposed method to handle a
+  request, then the framework searches for a method that has been
+  decorated as a ``@default`` or ``@lookup`` method (``@lookup``
+  decorators take precedence). The default method is expected to
+  behave identically to an "exposed" method in that it should respond
+  to the request.
 
 * **@lookup**: similar to the ``@default`` decorator, the ``@lookup``
   decorator is invoked when the framework could not find another

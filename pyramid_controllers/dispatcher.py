@@ -199,7 +199,7 @@ class Dispatcher(object):
     '''
     meta = self.getMeta(controller)
     for meth in meta.index:
-      yield ('', meth)
+      yield (self.NAME_INDEX, meth)
     names = dict()
     for name, curexp in meta.expose.items():
       names[name] = curexp[:]
@@ -236,10 +236,10 @@ class Dispatcher(object):
       for attr in names[name]:
         yield (name, attr)
     for meth in meta.default:
-      yield ('*', meth)
+      yield (self.NAME_DEFAULT, meth)
     if not hasIndirect:
       for meth in meta.lookup:
-        yield ('...', meth)
+        yield (self.NAME_LOOKUP, meth)
 
   #----------------------------------------------------------------------------
   def getFiddlers(self, request, controller, remainder):

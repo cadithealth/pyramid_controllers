@@ -11,7 +11,8 @@
 Helper functions for pyramid-controllers unit testing.
 '''
 
-import unittest, urllib
+import unittest
+from six.moves import urllib
 from pyramid import testing
 from pyramid.request import Request
 from pyramid.response import Response
@@ -61,6 +62,7 @@ class TestHelper(unittest.TestCase):
     self._setup(rootController, requestPath, **kw)
     # todo: there *must* be a better way to do this... there *must* be a
     #       way to leverage pyramid to do this...
+    #       ===> yes. i should be using ``webtest.TestApp()``...
     if requestPath == self.rootpath:
       view = self.views[0]['view']
       self.request.matchdict = {}
@@ -72,7 +74,7 @@ class TestHelper(unittest.TestCase):
       'pyramid_controllers_path':
         # note that the URL-escaping going on here is *only* to emulate
         # what pyramid does... it is *NOT* the desired behavior though!
-        urllib.unquote(requestPath[len(self.rootpath):])
+        urllib.parse.unquote(self.request.path[len(self.rootpath):]),
       }
     return view(self.request)
 

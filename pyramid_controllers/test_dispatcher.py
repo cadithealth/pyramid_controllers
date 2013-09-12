@@ -23,6 +23,7 @@ from pyramid_controllers import \
     Controller, Dispatcher, \
     expose, index, lookup, default, fiddle, expose_defaults
 from pyramid_controllers.decorator import PCATTR
+from pyramid_controllers.util import getVersion
 from .test_helpers import TestHelper
 
 #------------------------------------------------------------------------------
@@ -32,6 +33,14 @@ class TestDispatcher(TestHelper):
     'Calling config.include("pyramid_controllers") adds controller directive'
     self._setup(Controller(), '/')
     self.assertEqual([v['route_name'] for v in self.views], ['root-index', 'root'])
+
+  #----------------------------------------------------------------------------
+  def test_version(self):
+    v = getVersion()
+    if v == 'unknown':
+      # todo: this shouldn't really ever happen...
+      return
+    self.assertRegexpMatches(v, '^\d+(\.\d+)*$')
 
   #----------------------------------------------------------------------------
   # TEST @INDEX

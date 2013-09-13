@@ -12,7 +12,6 @@ from .integration import *
 from .controller import *
 from .restcontroller import *
 from .decorator import *
-from .describer import *
 
 #------------------------------------------------------------------------------
 # end of $Id$

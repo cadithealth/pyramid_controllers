@@ -30,10 +30,6 @@ dependencies = [
   'argparse             >= 1.2.1',
   'pyramid              >= 1.4.2',
   'six                  >= 1.4.1',
-
-  # todo: add optional dependency of PyYAML if format==yaml is desired
-  # 'PyYAML               >= 3.10',
-
   ]
 
 entrypoints = {

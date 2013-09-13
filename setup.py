@@ -55,7 +55,7 @@ classifiers = [
 
 setup(
   name                  = 'pyramid_controllers',
-  version               = '0.3.18',
+  version               = '0.3.19',
   description           = 'A pyramid plugin that provides de-centralized hierarchical object dispatch.',
   long_description      = read('README.rst'),
   classifiers           = classifiers,

@@ -53,10 +53,6 @@
   in for "such & such", then look up "such_and_such"... ok, that might
   be a bit too much, but perhaps something like 'such___such'?
 
-- make `DescriberController.formattext_html` try to load docutils, and
-  if successful, do rST formatting with that. otherwise fallback to the
-  pseudo-stuff...
-
 - currently the @lookup inspection done by the describer is a little
   'odd':
 
@@ -97,5 +93,3 @@
   the response is a '404 not found' if the method does not match. this
   should really be a '405 method not allowed' IFF all attributes
   match *except* method...
-
-- update DescribeController to inspect decorator `method` parameters

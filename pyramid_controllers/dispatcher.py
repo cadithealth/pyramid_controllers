@@ -17,7 +17,8 @@ algorithm of the controller-based request dispatch mechanism.
 #       an @default receives ``None`` as the current path element
 #       being requested instead of ''... is that what it should be?...
 
-import os.path, types, re, inspect, urllib
+import os.path, types, re, inspect, six
+from six.moves import urllib
 from pyramid.exceptions import ConfigurationError
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException, WSGIHTTPException
@@ -323,7 +324,7 @@ class Dispatcher(object):
       # strip leading '/'
       path = path[1:]
       # split at '/' and url-decode each component
-      path = [urllib.unquote(e) for e in path.split('/')]
+      path = [urllib.parse.unquote(e) for e in path.split('/')]
       return self.walk(request, controller, path)
     except (HTTPException, WSGIHTTPException, Response), exc:
       return exc

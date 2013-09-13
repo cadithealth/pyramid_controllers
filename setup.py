@@ -36,8 +36,7 @@ entrypoints = {
   }
 
 classifiers = [
-  'Development Status :: 4 - Beta',
-  #'Development Status :: 5 - Production/Stable',
+  'Development Status :: 5 - Production/Stable',
   'Intended Audience :: Developers',
   'Programming Language :: Python',
   'Framework :: Pyramid',
@@ -56,7 +55,7 @@ classifiers = [
 
 setup(
   name                  = 'pyramid_controllers',
-  version               = '0.3.17',
+  version               = '0.3.18',
   description           = 'A pyramid plugin that provides de-centralized hierarchical object dispatch.',
   long_description      = read('README.rst'),
   classifiers           = classifiers,

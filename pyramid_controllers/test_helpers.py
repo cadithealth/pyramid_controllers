@@ -82,6 +82,7 @@ class TestHelper(unittest.TestCase):
     self.assertEqual(res.status_code, status)
     if body is not None:
       if xml:
+        # todo: compare parsed XML
         self.assertMultiLineEqual(xnl(res.body), xnl(body))
       else:
         self.assertMultiLineEqual(res.body, body)

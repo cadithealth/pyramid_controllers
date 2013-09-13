@@ -397,8 +397,12 @@ class Dispatcher(object):
   def render(self, request, response, controller, handler, dectype, remainder):
     if isinstance(response, Response):
       return response
-    if isinstance(response, basestring):
-      return Response(response)
+    if isinstance(response, six.text_type):
+      request.response.text = response
+      return request.response
+    if isinstance(response, six.string_types):
+      request.response.body = response
+      return request.response
     package  = self.getPackageName(handler)
     renderer = getattr(request, 'override_renderer', None)
     if renderer is not None:

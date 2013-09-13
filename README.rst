@@ -4,7 +4,9 @@ pyramid_controllers
 
 The ``pyramid_controllers`` package is a pyramid plugin that provides
 de-centralized hierarchical object dispatch, similar to how the
-standard TurboGears request dispatch works.
+standard TurboGears request dispatch works. You may also be interested
+in the pyramid-describe_ package, which can make these controllers
+self-documenting.
 
 TL;DR
 =====
@@ -27,7 +29,7 @@ Use:
 
   # standard pyramid-controller imports
   from pyramid_controllers import \
-    Controller, RestController, DescribeController, \
+    Controller, RestController, \
     expose, expose_defaults, index, default, lookup, fiddle
 
   # create a controller for "/about/team" and "/about/mission"
@@ -58,11 +60,6 @@ Use:
   class RootController(Controller):
     about = AboutController()
     resource = ResourceDispatcher()
-    def __init__(self, *args, **kw):
-      super(RootController, self).__init__(*args, **kw)
-      # optional... this will allow '/desc' to describe this
-      # controller hierarchy
-      self.desc = DescribeController(self)
     @index
     def index(self, request):
       return HTTPFound('/about/mission')
@@ -186,12 +183,6 @@ controller classes:
 * **pyramid_controllers.RestController**: this class routes the
   various RESTful verbs to controller methods by the same name
   (note that the method names are lower-cased).
-
-* **pyramid_controllers.DescribeController**: this class is used to
-  describe a controller hierarchy. It is capable of outputting a
-  plain-text hierarchy, reStructuredText, HTML, JSON, YAML, WADL, and
-  XML. Usually, some level of customization is required to make this
-  very useful.
 
 Here is an example of the RestController, which will accept any of the
 standard HTTP verbs (GET, PUT, POST, DELETE) to the URL "/hello" and
@@ -335,3 +326,5 @@ Complex Example
     def _default(self, request, attribute, *rem):
       return 'My "%s" is "%r".' % (attribute, getattr(self.user, attribute))
 
+
+.. _pyramid-describe: https://pypi.python.org/pypi/pyramid_describe

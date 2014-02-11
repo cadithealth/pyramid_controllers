@@ -1,3 +1,14 @@
+- add support for OPTIONS request ==> should return which methods
+  are supported for a given URL.
+
+- if an @expose() limits the methods, and a request comes in for a
+  different method which does not match, it should result in 405, not
+  404.
+
+- what about supporting 'ext' with RestControllers...
+
+- allow both 'method' and 'methods' parameter to @expose/@index/etc.
+
 - consider using venusian for the decorators
   http://docs.pylonsproject.org/projects/venusian/en/latest/
 

@@ -57,21 +57,33 @@ class Dispatcher(object):
   NAME_LOOKUP  = '...'
 
   #----------------------------------------------------------------------------
-  def __init__(self, defaultForceSlash=True, autoDecorate=True, *args, **kw):
+  def __init__(self,
+               defaultForceSlash=True, raiseErrors=True, autoDecorate=True,
+               *args, **kw):
     '''
     Creates a new Dispatcher for controller hierarchy traversal and
     request dispatching. Accepts the following parameters:
 
     :Parameters:
 
-    defaultForceSlash : bool, default true, optional
+    defaultForceSlash : bool, optional, default: true
 
       Set the default value of @index's `forceSlash` parameter, which
       defaults to ``True``, i.e. index requests that do not have a
       trailing slash (``/``) will receive a 302 redirect with the
       slash appended.
 
-    autoDecorate : bool, default true, optional
+    raiseErrors : bool, optional, default: true
+
+      By default, any responses or raised exceptions that are
+      subclasses of `pyramid.httpexceptions.HTTPException` will cause
+      the dispatcher to raise that exception so that the pyramid
+      framework has a chance to negotiate response handling. This can
+      be overridden so that HTTPExceptions are returned instead (by
+      setting this value to false), in which case normal pyramid error
+      handling will be squelched.
+
+    autoDecorate : bool, optional, default: true
 
       Primarily for internal purposes -- when set to truthy (the
       default), the result of doing a controller exposure instance
@@ -89,6 +101,7 @@ class Dispatcher(object):
     '''
     super(Dispatcher, self).__init__(*args, **kw)
     self.defaultForceSlash = defaultForceSlash
+    self.raiseErrors       = raiseErrors
     self.autoDecorate      = autoDecorate
 
   #----------------------------------------------------------------------------
@@ -325,8 +338,13 @@ class Dispatcher(object):
       path = path[1:]
       # split at '/' and url-decode each component
       path = [urllib.parse.unquote(e) for e in path.split('/')]
-      return self.walk(request, controller, path)
+      ret = self.walk(request, controller, path)
+      if self.raiseErrors and isinstance(ret, (HTTPException, WSGIHTTPException)):
+        raise ret
+      return ret
     except (HTTPException, WSGIHTTPException, Response), exc:
+      if self.raiseErrors and isinstance(exc, (HTTPException, WSGIHTTPException)):
+        raise
       return exc
 
   #----------------------------------------------------------------------------

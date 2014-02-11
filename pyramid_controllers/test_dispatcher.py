@@ -30,7 +30,7 @@ from .test_helpers import TestHelper
 class TestDispatcher(TestHelper):
 
   def test_includeme_adds_index_and_root_views(self):
-    'Calling config.include("pyramid_controllers") adds controller directive'
+    # 'Calling config.include("pyramid_controllers") adds controller directive'
     self._setup(Controller(), '/')
     self.assertEqual([v['route_name'] for v in self.views], ['root-index', 'root'])
 
@@ -47,21 +47,21 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_root_index(self):
-    'Index requests at the root level'
+    # 'Index requests at the root level'
     class RootIndex(Controller):
       @index
       def index(self, request): return 'ok.index'
     self.assertResponse(self.send(RootIndex(), '/'), 200, 'ok.index')
 
   def test_root_index_without_forceSlash(self):
-    'Index requests at the root level with forceSlash disabled'
+    # 'Index requests at the root level with forceSlash disabled'
     class RootIndex(Controller):
       @index(forceSlash=False)
       def index(self, request): return 'ok.index'
     self.assertResponse(self.send(RootIndex(), '/'), 200, 'ok.index')
 
   def test_sub_index(self):
-    'Index requests at sub-controllers'
+    # 'Index requests at sub-controllers'
     class Sub(Controller):
       @index
       def index(self, request):
@@ -72,7 +72,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub'),  302, location='/sub/')
 
   def test_sub_index_without_forceSlash(self):
-    'Index requests at sub-controllers with forceSlash disabled'
+    # 'Index requests at sub-controllers with forceSlash disabled'
     class Sub(Controller):
       @index(forceSlash=False)
       def index(self, request):
@@ -83,7 +83,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub'),  200, 'ok.sub.index')
 
   def test_sub_index_with_nonstandard_name(self):
-    'Index requests at sub-controllers using non-standard method name'
+    # 'Index requests at sub-controllers using non-standard method name'
     class Sub(Controller):
       @index
       def index_nonstandard_name(self, request):
@@ -93,7 +93,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub/'), 200, 'ok.sub.index')
 
   def test_root_index_anchored_non_slash(self):
-    'Index requests at the root controller not anchored at "/"'
+    # 'Index requests at the root controller not anchored at "/"'
     class RootIndex(Controller):
       @index
       def index(self, request): return 'ok.index'
@@ -101,7 +101,7 @@ class TestDispatcher(TestHelper):
 
   # # TODO: this unit test currently fails... re-enable when fixed.
   # def test_root_index_anchored_non_slash_without_slash_redirects(self):
-  #   'Index requests at the root controller not anchored at "/" redirect to trailing slash'
+  #   # 'Index requests at the root controller not anchored at "/" redirect to trailing slash'
   #   class RootIndex(Controller):
   #     @index
   #     def index(self, request): return 'ok.index'
@@ -109,7 +109,7 @@ class TestDispatcher(TestHelper):
   #                                 302, location='/anchor/')
 
   def test_root_index_anchored_non_slash_without_forceSlash(self):
-    'Index requests at the root controller not anchored at "/" with forceSlash disabled'
+    # 'Index requests at the root controller not anchored at "/" with forceSlash disabled'
     class RootIndex(Controller):
       @index(forceSlash=False)
       def index(self, request): return 'ok.index'
@@ -117,7 +117,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(RootIndex(), '/anchor',  rootPath='/anchor'), 200, 'ok.index')
 
   def test_index_renderer(self):
-    '@index can specify a custom rendering engine'
+    # '@index can specify a custom rendering engine'
     class Root(Controller):
       @index(renderer='repr')
       def index(self, request):
@@ -125,7 +125,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/'), 200, "{'foo': 'bar'}")
 
   def test_index_method(self):
-    '@index can restrict which methods are allowed'
+    # '@index can restrict which methods are allowed'
     class Root(Controller):
       @index(method='GET')
       def index_get(self, request):
@@ -144,14 +144,14 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_root_method(self):
-    'Method resolution at the root level'
+    # 'Method resolution at the root level'
     class Root(Controller):
       @expose
       def method(self, request): return 'ok.method'
     self.assertResponse(self.send(Root(), '/method'), 200, 'ok.method')
 
   def test_sub_method(self):
-    'Method resolution at the root level'
+    # 'Method resolution at the root level'
     class Sub(Controller):
       @expose
       def method(self, request): return 'ok.sub.method'
@@ -160,7 +160,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub/method'), 200, 'ok.sub.method')
 
   def test_controller_expose(self):
-    'A sub-controller can be "unexposed", i.e. not directly available'
+    # 'A sub-controller can be "unexposed", i.e. not directly available'
     class Sub(Controller):
       @expose
       def method(self, request):
@@ -172,20 +172,20 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub2/method'), 404)
 
   def test_not_found(self):
-    'Non-existent methods result in 404 response status'
+    # 'Non-existent methods result in 404 response status'
     class Root(Controller):
       @expose
       def method(self, request): return 'ok.method'
     self.assertResponse(self.send(Root(), '/no-such-method'), 404, '')
 
   def test_not_exposed(self):
-    'Unexposed methods result in 404 response status'
+    # 'Unexposed methods result in 404 response status'
     class Root(Controller):
       def notexposed(self, request): return 'uh-oh.notexposed'
     self.assertResponse(self.send(Root(), '/notexposed'), 404, '')
 
   def test_expose_renderer(self):
-    '@expose can specify a custom rendering engine'
+    # '@expose can specify a custom rendering engine'
     class Root(Controller):
       @expose(renderer='repr')
       def method(self, request):
@@ -193,7 +193,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/method'), 200, "{'foo': 'bar'}")
 
   def test_expose_method(self):
-    '@expose can restrict which methods are allowed'
+    # '@expose can restrict which methods are allowed'
     class Root(Controller):
       @expose(name='res', method='GET')
       def resource_get(self, request):
@@ -208,7 +208,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/res', method='DELETE'), 404)
 
   def test_expose_on_bound_method(self):
-    '@expose on a bound method'
+    # '@expose on a bound method'
     class Ext(Controller):
       def __init__(self, name):
         super(Ext, self).__init__()
@@ -228,7 +228,7 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_handler_aliasing(self):
-    'Controller methods with @expose `name` attribute perform aliasing'
+    # 'Controller methods with @expose `name` attribute perform aliasing'
     class Name(Controller):
       @expose(name='data.json')
       def data(self, request):
@@ -237,7 +237,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Name(), '/data'),      404)
 
   def test_handler_multi_aliasing(self):
-    'Controller methods with variations on @expose `name` attribute perform multiple aliasing'
+    # 'Controller methods with variations on @expose `name` attribute perform multiple aliasing'
     class Name(Controller):
       @expose(name='data.json')
       @expose
@@ -247,7 +247,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Name(), '/data'),      200, 'ok.name.data')
 
   def test_handler_extension_aliasing(self):
-    'Controller methods with @expose `ext` attribute perform aliasing based on method name'
+    # 'Controller methods with @expose `ext` attribute perform aliasing based on method name'
     class Ext(Controller):
       @expose(ext='less', renderer='raw')
       @expose(ext='css', renderer='lessc')
@@ -267,7 +267,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Ext(), '/style'),      404)
 
   def test_expose_ext_list(self):
-    '@expose parameters "ext" and "name" can accept lists'
+    # '@expose parameters "ext" and "name" can accept lists'
     class Ext(Controller):
       @expose(ext=('txt', 'rst'))
       def ext(self, request): return 'ok.ext:' + request.path
@@ -280,7 +280,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Ext(), '/name'),    404)
 
   def test_expose_name_and_ext_are_combinative(self):
-    '@expose parameters "ext" and "name" are combinative'
+    # '@expose parameters "ext" and "name" are combinative'
     class Ext(Controller):
       @expose(name=('ver', 'rev'), ext=('txt', 'rst'))
       def handler(self, request): return 'ok.path:' + request.path
@@ -301,7 +301,7 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_fiddle_decorator(self):
-    'Simple request fiddling during hierarchy traversal'
+    # 'Simple request fiddling during hierarchy traversal'
     class Sub(Controller):
       @fiddle
       def _fiddle(self, request):
@@ -314,7 +314,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub/data'), 200, 'ok.sub.data:fiddled=True')
 
   def test_fiddle_decorator_with_nonstandard_name(self):
-    'Request fiddling with non-standard decorator name'
+    # 'Request fiddling with non-standard decorator name'
     class Sub(Controller):
       @fiddle
       def fiddle_nonstandard_name(self, request):
@@ -327,7 +327,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub/data'), 200, 'ok.sub.data:nsn-fiddled=True')
 
   def test_fiddle_with_subclassing(self):
-    'Multiple @fiddles coming from both sub-class and super-class should apply'
+    # 'Multiple @fiddles coming from both sub-class and super-class should apply'
     class Base(Controller):
       @fiddle
       def basefiddle(self, request):
@@ -342,7 +342,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=y,sub=y')
 
   def test_fiddle_with_subclassing_and_override(self):
-    'Multiple @fiddles coming from both sub-class and super-class should apply'
+    # 'Multiple @fiddles coming from both sub-class and super-class should apply'
     class Base(Controller):
       @fiddle
       def fiddle(self, request):
@@ -357,7 +357,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=n,sub=y')
 
   def test_fiddle_with_subclassing_and_super_cascade(self):
-    'Multiple @fiddles coming from both sub-class and super-class should apply'
+    # 'Multiple @fiddles coming from both sub-class and super-class should apply'
     class Base(Controller):
       @fiddle
       def fiddle(self, request):
@@ -377,7 +377,7 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_lookup(self):
-    'Dynamic traversal with @lookup'
+    # 'Dynamic traversal with @lookup'
     class Sub(Controller):
       @expose
       def echo(self, request):
@@ -394,7 +394,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/sub/echo'),        200, 'ok.sub.echo:None')
 
   def test_lookup_with_nonstandard_name(self):
-    'Dynamic traversal with @lookup using non-standard method name'
+    # 'Dynamic traversal with @lookup using non-standard method name'
     class Sub(Controller):
       @expose
       def echo(self, request):
@@ -413,7 +413,7 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_default(self):
-    'Fallback to @default handler'
+    # 'Fallback to @default handler'
     class Root(Controller):
       @expose
       def somemethod(self, request):
@@ -425,7 +425,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/'),             200, 'ok.default:None')
 
   def test_default_with_nonstandard_name(self):
-    'Fallback to @default handler with non-standard method name'
+    # 'Fallback to @default handler with non-standard method name'
     class Root(Controller):
       @expose
       def somemethod(self, request):
@@ -437,7 +437,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/'),             200, 'ok.default:None')
 
   def test_default_renderer(self):
-    '@default can specify a custom rendering engine'
+    # '@default can specify a custom rendering engine'
     class Root(Controller):
       @default(renderer='repr')
       def index(self, request, curpath, *remainder):
@@ -445,7 +445,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/zag/zig/zog'), 200, "{'args': ['zag', ['zig', 'zog']]}")
 
   def test_default_method(self):
-    '@default can restrict which methods are allowed'
+    # '@default can restrict which methods are allowed'
     class Root(Controller):
       @default(method='GET')
       def default_get(self, request, path, *rem):
@@ -464,7 +464,7 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_weird_error_no_custom_dispatcher(self):
-    'Unhandled exceptions bubble up and out'
+    # 'Unhandled exceptions bubble up and out'
     class Weird(Exception): pass
     class Root(Controller):
       @expose
@@ -475,7 +475,7 @@ class TestDispatcher(TestHelper):
       self.send, Root(), '/weird')
 
   def test_weird_error_with_custom_dispatcher(self):
-    'Custom dispatcher allows handling of unhandled exceptions before rollback'
+    # 'Custom dispatcher allows handling of unhandled exceptions before rollback'
     class Weird(Exception): pass
     class Root(Controller):
       @expose
@@ -494,7 +494,7 @@ class TestDispatcher(TestHelper):
   #----------------------------------------------------------------------------
 
   def test_expose_defaults_renderer(self):
-    'Controllers can specify default renderers for member @expose/@index/@default calls'
+    # 'Controllers can specify default renderers for member @expose/@index/@default calls'
     @expose_defaults(renderer='repr')
     class Root(Controller):
       @index
@@ -566,7 +566,7 @@ class TestDispatcher(TestHelper):
   #   self.assertResponse(self.send(root, '/raw/m'), 200, "RAW:{'c': 3}")
 
   def test_expose_defaults_ext(self):
-    'Controllers can specify default extensions for member @expose calls'
+    # 'Controllers can specify default extensions for member @expose calls'
     @expose_defaults(ext='json')
     class Root(Controller):
       @expose

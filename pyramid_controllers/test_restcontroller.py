@@ -29,7 +29,7 @@ class TestRestController(TestHelper):
 
   #----------------------------------------------------------------------------
   def test_exposed_http_method(self):
-    'RestControllers map HTTP methods to exposed controller methods'
+    # 'RestControllers map HTTP methods to exposed controller methods'
     class RestRoot(RestController):
       @expose
       def get(self, request): return 'ok.get'
@@ -41,7 +41,7 @@ class TestRestController(TestHelper):
 
   #----------------------------------------------------------------------------
   def test_unexposed_http_method(self):
-    'RestControllers respond with "405 Method Not Allowed" for un-exposed methods'
+    # 'RestControllers respond with "405 Method Not Allowed" for un-exposed methods'
     class RestRoot(RestController):
       @expose
       def get(self, request): return 'ok.get'
@@ -52,7 +52,7 @@ class TestRestController(TestHelper):
 
   #----------------------------------------------------------------------------
   def test_rest_custom_renderer(self):
-    'RestControllers support custom renderers in @exposed methods'
+    # 'RestControllers support custom renderers in @exposed methods'
     class RestRoot(RestController):
       @expose(renderer='repr')
       def get(self, request): return dict(foo='bar')

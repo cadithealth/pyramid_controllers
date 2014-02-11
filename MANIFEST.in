@@ -1,2 +1,1 @@
-include *.txt *.rst
-recursive-include docs *.txt *.rst
+include *.rst *.txt *.cfg

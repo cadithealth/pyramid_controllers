@@ -15,9 +15,9 @@ if sys.hexversion < 0x02070000:
   raise RuntimeError('This package requires python 2.7 or better')
 
 heredir = os.path.abspath(os.path.dirname(__file__))
-def read(*parts):
+def read(*parts, **kw):
   try:    return open(os.path.join(heredir, *parts)).read()
-  except: return ''
+  except: return kw.get('default', '')
 
 test_dependencies = [
   'nose                 >= 1.2.1',
@@ -55,7 +55,7 @@ classifiers = [
 
 setup(
   name                  = 'pyramid_controllers',
-  version               = '0.3.19',
+  version               = read('VERSION.txt', default='0.0.0').strip(),
   description           = 'A pyramid plugin that provides de-centralized hierarchical object dispatch.',
   long_description      = read('README.rst'),
   classifiers           = classifiers,

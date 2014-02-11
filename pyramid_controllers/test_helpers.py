@@ -12,10 +12,8 @@ Helper functions for pyramid-controllers unit testing.
 '''
 
 import unittest
-from six.moves import urllib
-from pyramid import testing
-from pyramid.request import Request
-from pyramid.response import Response
+from webtest import TestApp
+from pyramid.config import Configurator
 
 #------------------------------------------------------------------------------
 def reprRendererFactory(info):
@@ -35,48 +33,24 @@ class TestHelper(unittest.TestCase):
   def setUp(self):
     self.renderers = dict(repr=reprRendererFactory)
 
-  def _setup(self, rootController, requestPath,
-             rootPath='/', rootName='root',
-             dispatcher=None,
-             method='GET',
-             ):
-    self.reqpath  = requestPath
-    self.rootpath = rootPath
-    self.rootctrl = rootController
-    self.request  = request = Request.blank(requestPath)
-    self.request.method = method
-    self.config   = testing.setUp(request=request)
-    self.registry = request.registry = self.config.registry
-    self.settings = self.registry.settings = {}
-    self.config.include('pyramid_controllers')
-    self.views    = []
-    def dummy_add_view(**kw):
-      self.views.append(kw)
-    self.config.add_view = dummy_add_view
-    if rootPath is not None:
-      self.config.add_controller(rootName, rootPath, self.rootctrl, dispatcher=dispatcher)
+  def makeApp(self, controller, path=None, name=None, dispatcher=None):
+    config = Configurator(settings={})
+    config.include('pyramid_controllers')
+    config.add_controller(name or 'root', path or '/', controller, dispatcher)
     for name, factory in self.renderers.items():
-      self.config.add_renderer(name, factory)
+      config.add_renderer(name, factory)
+    return config.make_wsgi_app()
 
-  def send(self, rootController, requestPath, **kw):
-    self._setup(rootController, requestPath, **kw)
-    # todo: there *must* be a better way to do this... there *must* be a
-    #       way to leverage pyramid to do this...
-    #       ===> yes. i should be using ``webtest.TestApp()``...
-    if requestPath == self.rootpath:
-      view = self.views[0]['view']
-      self.request.matchdict = {}
-      return view(self.request)
-    if not requestPath.startswith(self.rootpath):
-      raise HTTPNotFound()
-    view = self.views[1]['view']
-    self.request.matchdict = {
-      'pyramid_controllers_path':
-        # note that the URL-escaping going on here is *only* to emulate
-        # what pyramid does... it is *NOT* the desired behavior though!
-        urllib.parse.unquote(self.request.path[len(self.rootpath):]),
-      }
-    return view(self.request)
+  def send(self, rootController, requestPath,
+           method=None, rootPath=None, dispatcher=None):
+    testapp = TestApp(self.makeApp(
+      rootController,
+      path=rootPath,
+      dispatcher=dispatcher,
+    ))
+    call = getattr(testapp, (method or 'GET').lower())
+    response = call(requestPath, status='*')
+    return response
 
   def assertResponse(self, res, status, body=None, location=None, xml=False):
     self.assertEqual(res.status_code, status)

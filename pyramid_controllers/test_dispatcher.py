@@ -24,6 +24,8 @@ from pyramid_controllers import \
     expose, index, lookup, default, fiddle, expose_defaults
 from pyramid_controllers.decorator import PCATTR
 from pyramid_controllers.util import getVersion
+from pyramid.config import Configurator
+
 from .test_helpers import TestHelper
 
 #------------------------------------------------------------------------------
@@ -31,8 +33,14 @@ class TestDispatcher(TestHelper):
 
   def test_includeme_adds_index_and_root_views(self):
     # 'Calling config.include("pyramid_controllers") adds controller directive'
-    self._setup(Controller(), '/')
-    self.assertEqual([v['route_name'] for v in self.views], ['root-index', 'root'])
+    config = Configurator(settings={})
+    config.include('pyramid_controllers')
+    views = []
+    def dummy_add_view(**kw):
+      views.append(kw)
+    config.add_view = dummy_add_view
+    config.add_controller('root', '/', Controller())
+    self.assertEqual([v['route_name'] for v in views], ['root-index', 'root'])
 
   #----------------------------------------------------------------------------
   def test_version(self):
@@ -69,7 +77,7 @@ class TestDispatcher(TestHelper):
     class Root(Controller):
       sub = Sub()
     self.assertResponse(self.send(Root(), '/sub/'), 200, 'ok.sub.index')
-    self.assertResponse(self.send(Root(), '/sub'),  302, location='/sub/')
+    self.assertResponse(self.send(Root(), '/sub'),  302, location='http://localhost/sub/')
 
   def test_sub_index_without_forceSlash(self):
     # 'Index requests at sub-controllers with forceSlash disabled'
@@ -176,13 +184,13 @@ class TestDispatcher(TestHelper):
     class Root(Controller):
       @expose
       def method(self, request): return 'ok.method'
-    self.assertResponse(self.send(Root(), '/no-such-method'), 404, '')
+    self.assertResponse(self.send(Root(), '/no-such-method'), 404)
 
   def test_not_exposed(self):
     # 'Unexposed methods result in 404 response status'
     class Root(Controller):
       def notexposed(self, request): return 'uh-oh.notexposed'
-    self.assertResponse(self.send(Root(), '/notexposed'), 404, '')
+    self.assertResponse(self.send(Root(), '/notexposed'), 404)
 
   def test_expose_renderer(self):
     # '@expose can specify a custom rendering engine'
@@ -441,7 +449,7 @@ class TestDispatcher(TestHelper):
     class Root(Controller):
       @default(renderer='repr')
       def index(self, request, curpath, *remainder):
-        return dict(args=[curpath, list(remainder)])
+        return dict(args=[str(curpath), [str(r) for r in remainder]])
     self.assertResponse(self.send(Root(), '/zag/zig/zog'), 200, "{'args': ['zag', ['zig', 'zog']]}")
 
   def test_default_method(self):
@@ -504,7 +512,7 @@ class TestDispatcher(TestHelper):
       @expose(renderer='raw')
       def raw(self, request): return dict(foo='raw')
       @default
-      def default(self, request, path): return dict(foo=path)
+      def default(self, request, path): return dict(foo=str(path))
     def raw(info):
       def _render(value, system):
         return 'RAW:' + repr(value)

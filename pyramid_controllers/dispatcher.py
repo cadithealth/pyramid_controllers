@@ -24,6 +24,7 @@ from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException, WSGIHTTPException
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPForbidden
 from pyramid.renderers import render_to_response
+
 from .controller import Controller
 from . import decorator
 from .util import adict, isstr
@@ -303,7 +304,11 @@ class Dispatcher(object):
   #----------------------------------------------------------------------------
   def getNextHandler(self, request, controller, remainder):
     name    = remainder[0]
-    handler = getattr(controller, name, None)
+    aname   = name
+    if six.PY2 and isinstance(name, unicode):
+      # python2's getattr() seems to require a 'str' attribute name...
+      aname = name.encode('utf-8')
+    handler = getattr(controller, aname, None)
     handler = self._filterNext(request, controller, remainder, handler)
     if handler is not None:
       return handler

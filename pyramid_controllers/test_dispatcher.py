@@ -231,6 +231,31 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(bar, '/zig.txt'), 404)
     self.assertResponse(self.send(zig, '/zig.txt'), 200, 'ok.path:/zig.txt')
 
+  def test_expose_urlencodedpath(self):
+    class Root(Controller):
+      @expose(name='and/or')
+      def andor(self, request):
+        return 'and/or'
+    self.assertResponse(self.send(Root(), '/and/for'), 404)
+    self.assertResponse(self.send(Root(), '/and%2for'), 404)
+    self.assertResponse(self.send(Root(), '/and%252for'), 200, 'and/or')
+
+  def test_expose_latin1(self):
+    class Root(Controller):
+      @expose(name=u'élève')
+      def student(self, request):
+        return 'student'
+    self.assertResponse(self.send(Root(), '/élève'), 200, 'student')
+    self.assertResponse(self.send(Root(), '/%c3%a9l%c3%a8ve'), 200, 'student')
+
+  def test_expose_unicode(self):
+    class Root(Controller):
+      @expose(name=u'安装说明')
+      def instructions(self, request):
+        return 'instructions'
+    self.assertResponse(self.send(Root(), '/安装说明'), 200, 'instructions')
+    self.assertResponse(self.send(Root(), '/%E5%AE%89%E8%A3%85%E8%AF%B4%E6%98%8E'), 200, 'instructions')
+
   #----------------------------------------------------------------------------
   # TEST @EXPOSE ALIASING
   #----------------------------------------------------------------------------

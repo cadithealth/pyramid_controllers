@@ -69,7 +69,7 @@ HTTP_METHODS = (
   # draft-reschke-webdav-search:
   'SEARCH',
 
-  )
+)
 
 def meth2action(meth):
   return re.sub('[^a-z]+', '_', meth.lower())
@@ -82,14 +82,15 @@ class RestController(Controller):
 
   #----------------------------------------------------------------------------
   @index(forceSlash=False)
-  def index(self, request):
+  def index(self, request, *args, **kw):
     method     = meth2action(getMethod(request))
     dispatcher = getDispatcherFromStack() or Dispatcher(autoDecorate=False)
     remainder  = [method]
     handler    = dispatcher.getNextHandler(request, self, remainder)
     if not handler:
       return HTTPMethodNotAllowed()
-    return dispatcher.handle(request, self, handler, 'expose', remainder)
+    # TODO: this feels wrong... perhaps this should be using @lookup instead?...
+    return dispatcher.handle(request, self, handler, 'expose', remainder, [])
 
 #------------------------------------------------------------------------------
 # end of $Id$

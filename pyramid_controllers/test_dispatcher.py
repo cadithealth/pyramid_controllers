@@ -21,10 +21,11 @@ from pyramid.httpexceptions import \
 from pyramid_controllers import \
     includeme, \
     Controller, Dispatcher, \
-    expose, index, lookup, default, fiddle, expose_defaults
+    expose, index, lookup, default, wrap, fiddle, expose_defaults
 from pyramid_controllers.decorator import PCATTR
 from pyramid_controllers.util import getVersion
 from pyramid.config import Configurator
+import six
 
 from .test_helpers import TestHelper
 
@@ -404,6 +405,49 @@ class TestDispatcher(TestHelper):
       def chk(self, request):
         return 'ok:base=%s,sub=%s' % (getattr(request, 'base', 'n'), getattr(request, 'sub', 'n'))
     self.assertResponse(self.send(Sub(), '/chk'), 200, 'ok:base=y,sub=y')
+
+  #----------------------------------------------------------------------------
+  # TEST @WRAP
+  #----------------------------------------------------------------------------
+
+  def test_wrap_decorator_single(self):
+    # 'request wrapping with generator to pre- and post-process request'
+    class Sub(Controller):
+      @wrap
+      def _wrap(self, request, handler):
+        request.wrapped = True
+        ret = handler(request)
+        if not isinstance(ret, six.string_types):
+          raise Exception('expected a string response')
+        return ret + ' (post)'
+      @expose
+      def data(self, request):
+        return 'ok:wrapped=%r' % (getattr(request, 'wrapped', False),)
+    class Root(Controller):
+      sub = Sub()
+    self.assertResponse(self.send(Root(), '/sub/data'), 200, 'ok:wrapped=True (post)')
+
+  def test_wrap_decorator_multiple(self):
+    # 'request wrapping with generator to pre- and post-process request'
+    class Sub(Controller):
+      @wrap
+      def _wrap(self, request, handler):
+        ret = handler(request)
+        if not isinstance(ret, six.string_types):
+          raise Exception('expected a string response')
+        return ret + '.sub'
+      @expose
+      def data(self, request):
+        return 'ok'
+    class Root(Controller):
+      @wrap
+      def _wrap(self, request, handler):
+        ret = handler(request)
+        if not isinstance(ret, six.string_types):
+          raise Exception('expected a string response')
+        return ret + '.root'
+      sub = Sub()
+    self.assertResponse(self.send(Root(), '/sub/data'), 200, 'ok.sub.root')
 
   #----------------------------------------------------------------------------
   # TEST @LOOKUP

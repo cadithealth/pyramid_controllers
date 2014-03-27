@@ -24,6 +24,7 @@ from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException, WSGIHTTPException
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPForbidden
 from pyramid.renderers import render_to_response
+import types
 
 from .controller import Controller
 from . import decorator
@@ -107,7 +108,7 @@ class Dispatcher(object):
 
   #----------------------------------------------------------------------------
   def makeMeta(self, controller):
-    meta = adict(fiddle=[], expose={}, index=[], lookup=[], default=[])
+    meta = adict(fiddle=[], wrap=[], expose={}, index=[], lookup=[], default=[])
     cpc = getattr(controller, decorator.PCCTRLATTR, None)
     # TODO: this call has side-effects!... modify this so that it doesn't.
     if cpc:
@@ -116,7 +117,7 @@ class Dispatcher(object):
       apc = getattr(attr, self.PCATTR, None)
       if not apc:
         continue
-      for dectype in ('fiddle', 'lookup', 'default', 'index'):
+      for dectype in ('fiddle', 'wrap', 'lookup', 'default', 'index'):
         if getattr(apc, dectype, []):
           meta[dectype].append(attr)
       for exp in apc.expose or []:
@@ -261,6 +262,10 @@ class Dispatcher(object):
     return self._getOp(request, controller, 'fiddle', remainder, multi=True)[0]
 
   #----------------------------------------------------------------------------
+  def getWrappers(self, request, controller, remainder):
+    return self._getOp(request, controller, 'wrap', remainder, multi=True)[0]
+
+  #----------------------------------------------------------------------------
   def getIndexHandler(self, request, controller, remainder):
     handler, spec = self._getOp(request, controller, 'index', remainder)
     if not handler:
@@ -343,7 +348,7 @@ class Dispatcher(object):
       path = path[1:]
       # split at '/' and url-decode each component
       path = [urllib.parse.unquote(e) for e in path.split('/')]
-      ret = self.walk(request, controller, path)
+      ret = self.walk(request, controller, path, [])
       if self.raiseErrors and isinstance(ret, (HTTPException, WSGIHTTPException)):
         raise ret
       return ret
@@ -353,7 +358,7 @@ class Dispatcher(object):
       return exc
 
   #----------------------------------------------------------------------------
-  def walk(self, request, controller, remainder):
+  def walk(self, request, controller, remainder, wrappers):
 
     # todo: aren't some already-instantiated classes still 'callable'?...
     if callable(controller):
@@ -363,6 +368,9 @@ class Dispatcher(object):
     fiddlers = self.getFiddlers(request, controller, remainder)
     for fiddler in fiddlers:
       request = fiddler(request) or request
+
+    # load wrappers
+    wrappers.extend(self.getWrappers(request, controller, remainder))
 
     if len(remainder) <= 0 or len(remainder) == 1 and remainder[0] == '':
       handler = self.getIndexHandler(request, controller, remainder)
@@ -374,28 +382,31 @@ class Dispatcher(object):
         args    = [None]
       if handler is None:
         raise HTTPNotFound()
-      return self.handle(request, controller, handler, dectype, remainder, args)
+      return self.handle(
+        request, controller, handler, dectype, remainder, wrappers, args=args)
 
     handler = self.getNextHandler(request, controller, remainder)
     if isinstance(handler, Controller) \
           or type(handler) in (types.TypeType, types.ClassType):
-      return self.walk(request, handler, remainder[1:])
+      return self.walk(request, handler, remainder[1:], wrappers)
     if handler is not None:
-      return self.handle(request, controller, handler, 'expose', remainder)
+      return self.handle(
+        request, controller, handler, 'expose', remainder, wrappers)
 
     lookup = self.getLookupHandler(request, controller, remainder)
     if lookup is not None:
       (controller, remainder) = lookup(request, *remainder)
-      return self.walk(request, controller, remainder)
+      return self.walk(request, controller, remainder, wrappers)
 
     default = self.getDefaultHandler(request, controller, remainder)
     if default is not None:
-      return self.handle(request, controller, default, 'default', remainder, args=remainder)
+      return self.handle(
+        request, controller, default, 'default', remainder, wrappers, args=remainder)
 
     raise HTTPNotFound()
 
   #----------------------------------------------------------------------------
-  def handle(self, request, controller, handler, dectype, remainder, args=None):
+  def handle(self, request, controller, handler, dectype, remainder, wrappers, args=None):
     if handler is None or not callable(handler):
       raise HTTPNotFound()
 
@@ -406,7 +417,12 @@ class Dispatcher(object):
       args = []
 
     # todo: should i trap exceptions to allow @expose matching?...
-    response = handler(request, *args, **params)
+    def recursive_handle(request):
+      if wrappers:
+        return wrappers.pop(0)(request, recursive_handle)
+      return handler(request, *args, **params)
+
+    response = recursive_handle(request)
     return self.render(request, response, controller, handler, dectype, remainder)
 
   #----------------------------------------------------------------------------

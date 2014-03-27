@@ -30,7 +30,7 @@ Use:
   # standard pyramid-controller imports
   from pyramid_controllers import \
     Controller, RestController, \
-    expose, expose_defaults, index, default, lookup, fiddle
+    expose, expose_defaults, index, default, lookup, wrap, fiddle
 
   # create a controller for "/about/team" and "/about/mission"
   class AboutController(Controller):
@@ -244,6 +244,15 @@ package that influence how a request is handled, as follows:
   for details on what parameters are passed and what is expected to be
   returned.
 
+* **@wrap**: a method that will wrap a request handling call. A @wrap
+  method is passed both a `request` object and a `handler` callable --
+  at some point the @wrap method should invoke ``handler(request)``
+  and return the response. Both the request and the response can be
+  modified or replaced inside the @wrap method. Cascading @wrap
+  methods will be invoked based on Controller traversal. Inherited and
+  multiple @wrap methods per controller are currently not explicitly
+  supported -- their behavior is undefined.
+
 * **@fiddle**: a method declared as a "fiddler" will be called before
   any other method in the given controller and is expected to do
   nothing more than alter the request in some way (such as add
@@ -268,7 +277,7 @@ Complex Example
   from pyramid_controllers import Controller, RestController
 
   # import the decorators
-  from pyramid_controllers import expose, index, lookup, default, fiddle
+  from pyramid_controllers import expose, index, lookup, default, wrap, fiddle
 
   class RootController(Controller):
     public = PublicController()
@@ -292,8 +301,8 @@ Complex Example
   class AdminController(Controller):
     @fiddle
     def checkAuth(self, request):
-      if userHasAdminAccess(request): return
-      raise HTTPForbidden()
+      if not userHasAdminAccess(request):
+        raise HTTPForbidden()
     @index
     def index(self, request):
       return 'View the list of <a href="users">active users</a>.'
@@ -302,10 +311,11 @@ Complex Example
       return '<ul><li>you</li></ul>'
 
   class MemberDispatchController(Controller):
-    @fiddle
-    def checkAuth(self, request):
-      if userHasMemberAccess(request): return
-      raise HTTPForbidden()
+    @wrap
+    def checkAuth(self, request, handler):
+      if not userHasMemberAccess(request):
+        raise HTTPForbidden()
+      return handler(request)
     @lookup
     def _lookup(self, username, *rem):
       user = findUserByUsername(username)

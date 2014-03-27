@@ -19,6 +19,7 @@ PCCTRLATTR = '__pyramid_controllers_class__'
 class MethodDecoration(object):
   def __init__(self):
     self.fiddle  = []
+    self.wrap    = []
     self.expose  = []
     self.index   = []
     self.lookup  = []
@@ -73,6 +74,7 @@ class ExposeDecorator(Decorator):
 
 #------------------------------------------------------------------------------
 class FiddleDecorator(Decorator):  attribute = 'fiddle'
+class WrapDecorator(Decorator):    attribute = 'wrap'
 class IndexDecorator(Decorator):   attribute = 'index'
 class LookupDecorator(Decorator):  attribute = 'lookup'
 class DefaultDecorator(Decorator): attribute = 'default'
@@ -338,6 +340,47 @@ fiddle = makeDecorator(FiddleDecorator, doc='''\
       def action(self, request):
         return 'You are a valid user!'
 
+  ''')
+
+
+#------------------------------------------------------------------------------
+wrap = makeDecorator(WrapDecorator, doc='''\
+
+  The ``@wrap`` decorator indicates that the decorated
+  :class:`Controller` method should be called to invoke the final
+  request handler. The method is passed two parameters: the `request`
+  object, and the `handler` callable. The method is expected to call
+  `handler` with the provided `request` (or some other Request) and
+  return the return value (or some other Response) from `handler`.
+  Note that the callable may be another wrapper method (when chaining
+  the methods). Example:
+
+  .. code-block:: python
+
+    class WrapController(Controller):
+
+      @wrap
+      def wrapper(self, request, handler):
+        if not user_has_access(request):
+          raise HTTPForbidden('Access denied.')
+        try:
+          response = handler(request)
+        except BadUserRequest:
+          raise HTTPForbidden('Bad request.')
+        if isinstance(response, BadUserRequest):
+          raise HTTPForbidden('Bad request.')
+        return response
+
+  @wrap is typically used to alter the request in some way before
+  handling, such as to implement access control in a custom Controller
+  base class, and to alter the request after handling, such as to add
+  custom response headers.
+
+  Cascading @wrap methods will be invoked in order based on Controller
+  traversal.
+
+  Inherited and multiple @wrap methods per controller are currently
+  not explicitly supported -- their behavior is undefined.
   ''')
 
 

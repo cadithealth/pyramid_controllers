@@ -390,6 +390,8 @@ class Dispatcher(object):
           or type(handler) in (types.TypeType, types.ClassType):
       return self.walk(request, handler, remainder[1:], wrappers)
     if handler is not None:
+      if len(remainder) > 1:
+        raise HTTPNotFound()
       return self.handle(
         request, controller, handler, 'expose', remainder, wrappers)
 

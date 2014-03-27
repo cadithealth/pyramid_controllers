@@ -257,6 +257,14 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/安装说明'), 200, 'instructions')
     self.assertResponse(self.send(Root(), '/%E5%AE%89%E8%A3%85%E8%AF%B4%E6%98%8E'), 200, 'instructions')
 
+  def test_extra_path_segments(self):
+    class Root(Controller):
+      @expose
+      def method(self, request): return 'ok.method'
+    self.assertResponse(self.send(Root(), '/method'), 200, 'ok.method')
+    self.assertResponse(self.send(Root(), '/method/foo'), 404)
+    self.assertResponse(self.send(Root(), '/method/foo/bar'), 404)
+
   #----------------------------------------------------------------------------
   # TEST @EXPOSE ALIASING
   #----------------------------------------------------------------------------

@@ -259,11 +259,15 @@ class TestDispatcher(TestHelper):
 
   def test_extra_path_segments(self):
     class Root(Controller):
+      @index
+      def index(self, request): return 'ok.index'
       @expose
       def method(self, request): return 'ok.method'
-    self.assertResponse(self.send(Root(), '/method'), 200, 'ok.method')
-    self.assertResponse(self.send(Root(), '/method/foo'), 404)
+    self.assertResponse(self.send(Root(), '/method'),         200, 'ok.method')
+    self.assertResponse(self.send(Root(), '/'),               200, 'ok.index')
+    self.assertResponse(self.send(Root(), '/method/foo'),     404)
     self.assertResponse(self.send(Root(), '/method/foo/bar'), 404)
+    self.assertResponse(self.send(Root(), '/foo'),            404)
 
   #----------------------------------------------------------------------------
   # TEST @EXPOSE ALIASING

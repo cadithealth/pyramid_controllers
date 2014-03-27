@@ -23,17 +23,17 @@ test_dependencies = [
   'nose                 >= 1.2.1',
   'coverage             >= 3.5.3',
   'WebTest              >= 1.4.0',
-  ]
+]
 
 dependencies = [
   'distribute           >= 0.6.24',
   'argparse             >= 1.2.1',
   'pyramid              >= 1.4.2',
   'six                  >= 1.4.1',
-  ]
+]
 
 entrypoints = {
-  }
+}
 
 classifiers = [
   'Development Status :: 5 - Production/Stable',
@@ -51,7 +51,7 @@ classifiers = [
   'Natural Language :: English',
   'License :: OSI Approved :: MIT License',
   'License :: Public Domain',
-  ]
+]
 
 setup(
   name                  = 'pyramid_controllers',
@@ -72,7 +72,7 @@ setup(
   test_suite            = 'pyramid_controllers',
   entry_points          = entrypoints,
   license               = 'MIT (http://opensource.org/licenses/MIT)',
-  )
+)
 
 #------------------------------------------------------------------------------
 # end of $Id$

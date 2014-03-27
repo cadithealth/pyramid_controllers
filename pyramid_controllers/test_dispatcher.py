@@ -213,7 +213,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/res'), 200, 'res with GET')
     self.assertResponse(self.send(Root(), '/res', method='PUT'), 200, 'res with PUT (PorP)')
     self.assertResponse(self.send(Root(), '/res', method='POST'), 200, 'res with POST (PorP)')
-    # TODO: this should return a 405...
+    # TODO: this should probably return a 405...
     self.assertResponse(self.send(Root(), '/res', method='DELETE'), 404)
 
   def test_expose_on_bound_method(self):
@@ -533,7 +533,7 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/res'), 200, 'default GET')
     self.assertResponse(self.send(Root(), '/res', method='PUT'), 200, 'default PUT (PorP)')
     self.assertResponse(self.send(Root(), '/res', method='POST'), 200, 'default POST (PorP)')
-    # TODO: this should return a 405...
+    # TODO: this should probably return a 405...
     self.assertResponse(self.send(Root(), '/res', method='DELETE'), 404)
 
   #----------------------------------------------------------------------------

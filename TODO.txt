@@ -12,13 +12,6 @@
 - consider using venusian for the decorators
   http://docs.pylonsproject.org/projects/venusian/en/latest/
 
-- currently, given the following:
-    class RootController(Controller):
-      @expose
-      def foo(self, request): return 'bar'
-  a request to "/foo" will return "bar" (as expected). however
-  "/foo/zig" does not yield a 404 as it should.
-
 - do *extensible* request path translation, e.g.
     /foo/bar/file.ext becomes Class Root > Class Bar > method 'file_ext'
   or something like that...
@@ -29,7 +22,7 @@
     def index(...): ...
   be accessible at both /path/ and /path/index.
 
-- support @expose(methods=...) and @expose_defaults(methods=...) which
+- support @expose(method=...) and @expose_defaults(method=...) which
   limits what methods this function will support
 
 - does pyramid_handlers not pollute the class namespace... how does

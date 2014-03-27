@@ -1,9 +1,10 @@
 - add support for OPTIONS request ==> should return which methods
   are supported for a given URL.
 
-- if an @expose() limits the methods, and a request comes in for a
-  different method which does not match, it should result in 405, not
-  404.
+- if an @expose, @index, or @default limits the methods, and a request
+  comes in for a different method which does not match, it should
+  result in 405, not 404 (as it does currently). note that it should
+  do this IFF all attributes match *except* method...
 
 - what about supporting 'ext' with RestControllers...
 
@@ -11,10 +12,6 @@
 
 - consider using venusian for the decorators
   http://docs.pylonsproject.org/projects/venusian/en/latest/
-
-- do *extensible* request path translation, e.g.
-    /foo/bar/file.ext becomes Class Root > Class Bar > method 'file_ext'
-  or something like that...
 
 - support @index(expose=True), which is equivalent to specifying
   both @index *and* @expose, ie. it makes the following method:
@@ -56,6 +53,8 @@
 - implement a method name transformation logic. eg. if a request comes
   in for "such & such", then look up "such_and_such"... ok, that might
   be a bit too much, but perhaps something like 'such___such'?
+  another example:
+    /foo/bar/file.ext => Class Root > Class Bar > method 'file_ext'
 
 - currently the @lookup inspection done by the describer is a little
   'odd':
@@ -92,8 +91,3 @@
     @expose(name=('put', 'post'))
     def put(self, request):
       # ...
-
-- when using @expose, @index or @default with the `method` parameter,
-  the response is a '404 not found' if the method does not match. this
-  should really be a '405 method not allowed' IFF all attributes
-  match *except* method...

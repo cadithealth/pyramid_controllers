@@ -21,7 +21,7 @@ from pyramid.httpexceptions import \
 from pyramid_controllers import \
     includeme, \
     Controller, RestController, Dispatcher, \
-    expose, index, lookup, default, fiddle
+    expose, index, lookup, default, fiddle, wrap
 from .test_helpers import TestHelper
 
 #------------------------------------------------------------------------------
@@ -56,7 +56,25 @@ class TestRestController(TestHelper):
     class RestRoot(RestController):
       @expose(renderer='repr')
       def get(self, request): return dict(foo='bar')
-    self.assertResponse(self.send(RestRoot(), '/', method='GET'), 200, "{'foo': 'bar'}")
+    self.assertResponse(
+      self.send(RestRoot(), '/', method='GET'), 200, "{'foo': 'bar'}")
+
+  #----------------------------------------------------------------------------
+  def test_premature_rendering(self):
+    # unit test for issue #2
+    class Rest(RestController):
+      @expose(renderer='repr')
+      def get(self, request): return dict(foo='bar')
+    class Root(Controller):
+      @wrap
+      def wrap(self, request, handler):
+        res = handler(request)
+        if isinstance(res, dict) and res['foo'] == 'bar':
+          res['foo'] = 'zig'
+        return res
+      rest = Rest()
+    self.assertResponse(
+      self.send(Root(), '/rest', method='GET'), 200, "{'foo': 'zig'}")
 
 #------------------------------------------------------------------------------
 # end of $Id$

@@ -89,8 +89,27 @@ class RestController(Controller):
     handler    = dispatcher.getNextHandler(request, self, remainder)
     if not handler:
       return HTTPMethodNotAllowed()
-    # TODO: this feels wrong... perhaps this should be using @lookup instead?...
-    return dispatcher.handle(request, self, handler, 'expose', remainder, [])
+    # TODO: would this hack be "much better solved" by using @lookup instead?...
+    # *** HACKALERT *** HACKALERT *** HACKALERT *** HACKALERT *** HACKALERT ***
+    # TODO: this is an *elaborate* hack to keep the "sub" dispatcher from
+    #       rendering the response... since it will be rendered when i return
+    #       it here... (to address issue #2)
+    class SnagException(Exception): pass
+    def snagger(request, handler):
+      raise SnagException(handler(request))
+    try:
+      return dispatcher.handle(request, self, handler, 'expose', remainder, [snagger])
+    except SnagException as se:
+      # NOTE: this `_restcontroller_snaghack` is GROSS! it basically
+      #       is a major, super-ugly, disgusting hack-on-a-hack that
+      #       allows the RestController method to override the
+      #       "renderer" in its @expose().
+      request._restcontroller_snaghack = (handler, 'expose')
+      return se.args[0]
+    # /HACKALERT
+    # THE OLD NON-HACK WAY (but that breaks `@wrap` handling)
+    # # TODO: this feels wrong... perhaps this should be using @lookup instead?...
+    # return dispatcher.handle(request, self, handler, 'expose', remainder, [])
 
 #------------------------------------------------------------------------------
 # end of $Id$

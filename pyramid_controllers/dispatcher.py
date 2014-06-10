@@ -466,6 +466,9 @@ class Dispatcher(object):
     renderer = getattr(request, 'override_renderer', None)
     if renderer is not None:
       return render_to_response(renderer, response, request, package)
+    # NOTE: this is a *horrible* hack... see restcontroller.py why it
+    #       is needed.
+    handler, dectype  = getattr(request, '_restcontroller_snaghack', (handler, dectype))
     pc   = getattr(handler, self.PCATTR, adict())
     spec = self._select(request, response, controller, handler, dectype,
                         remainder, getattr(pc, dectype, []))

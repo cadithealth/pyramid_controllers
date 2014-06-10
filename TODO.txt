@@ -1,3 +1,19 @@
+- RestController should use @lookup instead of @index...
+
+- RestController should inspect all exposed methods, look at
+  the "method" parameter, and use that. for example, these two
+  should be equivalent:
+
+    class C(RestController):
+      @expose
+      def put(self, request): return 'ok!'
+      @expose
+      def post(self, request): return self.put(request)
+
+    class C(RestController):
+      @expose(method=('put', 'post'))
+      def put(self, request): return 'ok!'
+
 - add support for OPTIONS request ==> should return which methods
   are supported for a given URL.
 

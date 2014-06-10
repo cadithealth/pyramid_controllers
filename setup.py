@@ -32,6 +32,13 @@ dependencies = [
   'six                  >= 1.4.1',
 ]
 
+extras_dependencies = {
+  'tm':  [
+    'pyramid-tm         >= 0.7',
+    'transaction        >= 1.4.1',
+  ]
+}
+
 entrypoints = {
 }
 
@@ -68,6 +75,7 @@ setup(
   include_package_data  = True,
   zip_safe              = True,
   install_requires      = dependencies,
+  extras_require        = extras_dependencies,
   tests_require         = test_dependencies,
   test_suite            = 'pyramid_controllers',
   entry_points          = entrypoints,

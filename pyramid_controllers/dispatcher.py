@@ -21,7 +21,7 @@ import os.path, types, re, inspect, six
 from six.moves import urllib
 from pyramid.exceptions import ConfigurationError
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPException, WSGIHTTPException
+from pyramid.httpexceptions import HTTPException, HTTPError
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPForbidden
 from pyramid.renderers import render_to_response
 import types
@@ -60,7 +60,8 @@ class Dispatcher(object):
 
   #----------------------------------------------------------------------------
   def __init__(self,
-               defaultForceSlash=True, raiseErrors=True, autoDecorate=True,
+               defaultForceSlash=True, raiseType=HTTPError, autoDecorate=True,
+               raiseErrors=None, # DEPRECATED
                *args, **kw):
     '''
     Creates a new Dispatcher for controller hierarchy traversal and
@@ -75,15 +76,29 @@ class Dispatcher(object):
       trailing slash (``/``) will receive a 302 redirect with the
       slash appended.
 
-    raiseErrors : bool, optional, default: true
+    raiseType : { type-or-class, list(type-or-class) }, optional, default: HTTPError
 
-      By default, any responses or raised exceptions that are
-      subclasses of `pyramid.httpexceptions.HTTPException` will cause
-      the dispatcher to raise that exception so that the pyramid
-      framework has a chance to negotiate response handling. This can
-      be overridden so that HTTPExceptions are returned instead (by
-      setting this value to false), in which case normal pyramid error
-      handling will be squelched.
+      Any responses or raised exceptions that are subclasses of
+      `pyramid.httpexceptions.HTTPException` are handled specially: if
+      they are subclasses of `raiseType` (which defaults to HTTPError;
+      i.e. 4xx and 5xx response status codes) will cause the
+      dispatcher to raise that exception, and the others (which
+      defaults to 1xx and 2xx response status codes) are simply
+      returned as-is.
+
+      Non-HTTPException responses or exceptions are not changed in any
+      way by the dispatcher.
+
+      The primary impact of this is when `pyramid-controllers` is
+      combined with `pyramid-tm` (the transaction manager): when an
+      HTTPException is *returned*, it will cause the transaction to
+      commit, whereas if it is *raised*, the transaction is rolled
+      back.
+
+    raiseErrors : bool, DEPRECATED, optional, default: null
+
+      DEPRECATED -- only here for backward compatibility. Please use
+      `raiseType` instead.
 
     autoDecorate : bool, optional, default: true
 
@@ -103,7 +118,9 @@ class Dispatcher(object):
     '''
     super(Dispatcher, self).__init__(*args, **kw)
     self.defaultForceSlash = defaultForceSlash
-    self.raiseErrors       = raiseErrors
+    self.raiseType         = raiseType
+    if raiseType is HTTPError and raiseErrors is not None:
+      self.raiseType         = HTTPError if raiseErrors else ()
     self.autoDecorate      = autoDecorate
 
   #----------------------------------------------------------------------------
@@ -349,11 +366,11 @@ class Dispatcher(object):
       # split at '/' and url-decode each component
       path = [urllib.parse.unquote(e) for e in path.split('/')]
       ret = self.walk(request, controller, path, [])
-      if self.raiseErrors and isinstance(ret, (HTTPException, WSGIHTTPException)):
+      if isinstance(ret, HTTPException) and isinstance(ret, self.raiseType or ()):
         raise ret
       return ret
-    except (HTTPException, WSGIHTTPException, Response), exc:
-      if self.raiseErrors and isinstance(exc, (HTTPException, WSGIHTTPException)):
+    except (HTTPException,), exc:
+      if isinstance(exc, self.raiseType or ()):
         raise
       return exc
 

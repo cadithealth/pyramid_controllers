@@ -3,6 +3,15 @@ ChangeLog
 =========
 
 
+v0.3.23
+=======
+
+* Added dispatcher parameter `raiseType` and deprecated `raiseErrors`
+* Changed meaning of ``raiseErrors=True`` to raise on 4xx and 5xx
+  *only* (by aliasing to ``raiseType=HTTPError``)
+* Added workaround for issue #2 (RestController renders prematurely)
+
+
 v0.3.22
 =======
 

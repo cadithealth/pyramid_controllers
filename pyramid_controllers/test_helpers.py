@@ -33,20 +33,28 @@ class TestHelper(unittest.TestCase):
   def setUp(self):
     self.renderers = dict(repr=reprRendererFactory)
 
-  def makeApp(self, controller, path=None, name=None, dispatcher=None):
+  def makeApp(self, controller,
+              path=None, name=None, dispatcher=None, config_hook=None):
     config = Configurator(settings={})
     config.include('pyramid_controllers')
+    try:
+      config.include('pyramid_tm')
+    except ImportError:
+      pass
     config.add_controller(name or 'root', path or '/', controller, dispatcher)
     for name, factory in self.renderers.items():
       config.add_renderer(name, factory)
+    if config_hook:
+      config_hook(config)
     return config.make_wsgi_app()
 
   def send(self, rootController, requestPath,
-           method=None, rootPath=None, dispatcher=None):
+           method=None, rootPath=None, dispatcher=None, config_hook=None):
     testapp = TestApp(self.makeApp(
       rootController,
-      path=rootPath,
-      dispatcher=dispatcher,
+      path        = rootPath,
+      dispatcher  = dispatcher,
+      config_hook = config_hook,
     ))
     call = getattr(testapp, (method or 'GET').lower())
     response = call(requestPath, status='*')
@@ -62,6 +70,7 @@ class TestHelper(unittest.TestCase):
         self.assertMultiLineEqual(res.body, body)
     if location is not None:
       self.assertEqual(res.headers['Location'], location)
+    return res
 
 #------------------------------------------------------------------------------
 # end of $Id$

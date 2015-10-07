@@ -3,6 +3,12 @@ ChangeLog
 =========
 
 
+v0.3.24
+=======
+
+* Removed `distribute` dependency
+
+
 v0.3.23
 =======
 

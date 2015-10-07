@@ -1,3 +1,26 @@
+- enable a RestController method to NOT be listed as a verb, but
+  instead as an endpoint... example:
+
+    @expose()
+    def search(self, request): pass
+
+  gets listed as a method by pyramid-describe...
+  perhaps:
+
+    @expose(rest=False)
+
+- it would be great if RestController automagically supported
+  responses to the OPTIONS request...
+  ==> see gripe about github in:
+      http://docs.python-requests.org/en/latest/user/advanced/#http-verbs
+
+- merge @default and @lookup: make the dispatcher look at the result -
+  if it's a Response, assume @default behavior. otherwise, if it is a
+  two-element tuple where the first parameter is a Controller, and the
+  second parameter a list, assume @lookup behavior. then fallback to
+  @default behavior, and assume that the returned data structure is
+  intended for the renderer...
+
 - RestController should use @lookup instead of @index...
 
 - RestController should inspect all exposed methods, look at

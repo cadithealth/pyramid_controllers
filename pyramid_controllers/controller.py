@@ -35,7 +35,7 @@ class Controller(object):
   '''
 
   #----------------------------------------------------------------------------
-  def __init__(self, request=None, expose=True):
+  def __init__(self, request=None, expose=True, dashUnder=None):
     '''
     Constructor, accepts the following parameters:
 
@@ -79,10 +79,31 @@ class Controller(object):
       * The URL pattern /model/{MODELID}/action can be auto-discovered
         (if one assumes the convention that non-exposed attribute
         controlers are lookup-targets).
+
+    :param dashUnder:
+
+      Overrides the current `Dispatcher`'s `defaultDashUnder` value in
+      how **THIS** controller's path component is referenced, for
+      example::
+
+        class SubModelController(Controller):
+          pass
+
+        class RootController(Controller):
+          sub_model0 = SubModelController()
+          sub_model1 = SubModelController(dashUnder=False)
+          sub_model2 = SubModelController(dashUnder=True)
+
+      would explicitly return 404 for ``/sub-model1/...``, explicitly
+      allow ``/sub-model2/...`` to be handled by `SubModelController`,
+      and ``/sub-model0/...`` would default to the current Dispatcher's
+      default value.
     '''
-    self._pyramid_controllers = adict(expose=expose)
+    self._pyramid_controllers = adict(expose=expose, dashUnder=dashUnder)
     self.request = request
+
 
 #------------------------------------------------------------------------------
 # end of $Id$
+# $ChangeLog$
 #------------------------------------------------------------------------------

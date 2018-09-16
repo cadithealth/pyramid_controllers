@@ -3,6 +3,12 @@ ChangeLog
 =========
 
 
+v0.3.25
+=======
+
+* Added support for automatic dash-to-underscore aliasing in handler resolution
+
+
 v0.3.24
 =======
 

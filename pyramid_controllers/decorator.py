@@ -62,14 +62,8 @@ class ExposeDecorator(Decorator):
   def enhance(self, wrapped, decoration, kw):
     if kw.name and isstr(kw.name):
       kw.name = [kw.name]
-    if 'ext' in kw:
-      if not kw.name:
-        kw.name = [wrapped.__name__]
-      if kw.ext is None or isstr(kw.ext):
-        kw.ext = [kw.ext]
-      kw.name = [(name + '.' + ext if ext is not None else name)
-                 for name in kw.name for ext in kw.ext]
-      # del kw.ext
+    if kw.ext and isstr(kw.ext):
+      kw.ext = [kw.ext]
     super(ExposeDecorator, self).enhance(wrapped, decoration, kw)
 
 #------------------------------------------------------------------------------
@@ -109,6 +103,15 @@ expose = makeDecorator(ExposeDecorator, doc='''\
     special characters or reserved words (such as ``def``). Note that
     if this option is used, then the normal method name itself will no
     longer be exposed unless explicitly listed.
+
+  dashUnder : bool, default: true
+
+    Boolean that controls whether or not underscore-separated words in
+    the method name will also match the dash-separated version. Note
+    that explicitly setting the `name` parameter will make `dashUnder`
+    be ignored. The default behaviour is controlled by the
+    :class:`pyramid_controllers.Dispatcher` in effect for the current
+    request (which, by default, is set to true).
 
   ext : { str, list(str) }, optional
 
@@ -158,7 +161,7 @@ index = makeDecorator(IndexDecorator, doc='''\
 
   :Parameters:
 
-  forceSlash : bool, default true, optional
+  forceSlash : bool, default: true
 
     Boolean that controls whether or not an index request that does
     not have a trailing slash ("/") should be 302 redirected to a
@@ -404,21 +407,16 @@ class ClassDecoration(object):
         apc = getattr(attr, PCATTR, None)
         if not apc:
           continue
-        for dectype in ('expose', 'index', 'default'):
+        for dectype in ( 'expose', 'index', 'default' ):
           for spec in getattr(apc, dectype, []):
-            for decattr in ('renderer', 'method'):
+            for decattr in ( 'renderer', 'method' ):
               if decattr in defs and decattr not in spec:
                 setattr(spec, decattr, getattr(defs, decattr))
-        for dectype in ('expose',):
+        for dectype in ( 'expose', ):
           for spec in getattr(apc, dectype, []):
-            if 'ext' in defs and 'ext' not in spec:
-              names = spec.name if 'name' in spec else [name]
-              spec.name = [name + '.' + e if e is not None else name
-                           for e in defs.ext
-                           for name in names]
-              # note: setting spec.ext to indicate that extensions have
-              #       already been applied...
-              spec.ext = defs.ext
+            for decattr in ( 'ext', ):
+              if decattr in defs and decattr not in spec:
+                setattr(spec, decattr, getattr(defs, decattr))
 
 #------------------------------------------------------------------------------
 class ExposeDefaultsDecorator(object):
@@ -474,6 +472,12 @@ def expose_defaults(*args, **kw):
 
     any @index, @default, and @expose decorated methods that do not
     have a pre-existing `method` definition will inherit this value.
+
+  dashUnder : bool, optional
+
+    any @expose that does not explicitly set a `dashUnder` value
+    will inherit this setting (and will override the the dispatcher's
+    setting).
 
   '''
   if len(args) == 1 and len(kw) == 0 and type(args[0]) == types.FunctionType:

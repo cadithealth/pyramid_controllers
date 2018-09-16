@@ -428,6 +428,7 @@ class TestDispatcher(TestHelper):
       def name(self, request): return 'ok.name:' + request.path
     self.assertResponse(self.send(Ext(), '/ext.txt'), 200, 'ok.ext:/ext.txt')
     self.assertResponse(self.send(Ext(), '/ext.rst'), 200, 'ok.ext:/ext.rst')
+    self.assertResponse(self.send(Ext(), '/ext'),     404)
     self.assertResponse(self.send(Ext(), '/foo'),     200, 'ok.name:/foo')
     self.assertResponse(self.send(Ext(), '/bar'),     200, 'ok.name:/bar')
     self.assertResponse(self.send(Ext(), '/name'),    404)
@@ -440,7 +441,7 @@ class TestDispatcher(TestHelper):
     # note: this is violating the abstraction barrier... oh well. testing
     #       the i-rep!... :)
     self.assertEqual(
-      sorted(getattr(Ext().handler, PCATTR).expose[0]['name']),
+      sorted(Dispatcher().makeMeta(Ext().handler).expose.keys()),
       sorted(['ver.txt', 'ver.rst', 'rev.txt', 'rev.rst']))
     self.assertResponse(self.send(Ext(), '/ver.txt'), 200, 'ok.path:/ver.txt')
     self.assertResponse(self.send(Ext(), '/ver.rst'), 200, 'ok.path:/ver.rst')
@@ -448,6 +449,49 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Ext(), '/rev.rst'), 200, 'ok.path:/rev.rst')
     self.assertResponse(self.send(Ext(), '/rev'),     404)
     self.assertResponse(self.send(Ext(), '/ver'),     404)
+
+  def test_expose_dashunder(self):
+    # '@expose auto-aliases underscores to dashes'
+    class Sub(Controller):
+      @default
+      def default(self, request, *path): return 'path:' + request.path
+    class Ext(Controller):
+      test_sub1 = Sub()
+      test_sub2 = Sub(dashUnder=False)
+      @expose(name='test_explicit_under')
+      def test_explicit_under(self, request): return 'path:' + request.path
+      @expose(name='test-explicit-dash')
+      def test_explicit_dash(self, request): return 'path:' + request.path
+      @expose(name=('test_explicit_both', 'test-explicit-both'))
+      def test_explicit_both(self, request): return 'path:' + request.path
+      @expose(dashUnder=False)
+      def test_suppress(self, request): return 'path:' + request.path
+      @expose
+      def test_implicit(self, request): return 'path:' + request.path
+      @expose(ext=('iso', 'ogg'))
+      def test_ext(self, request): return 'path:' + request.path
+    self.assertResponse(self.send(Ext(), '/test_explicit_under'), 200, 'path:/test_explicit_under')
+    self.assertResponse(self.send(Ext(), '/test-explicit-under'), 404)
+    self.assertResponse(self.send(Ext(), '/test-explicit-dash'),  200, 'path:/test-explicit-dash')
+    self.assertResponse(self.send(Ext(), '/test_explicit_dash'),  404)
+    self.assertResponse(self.send(Ext(), '/test_explicit_both'),  200, 'path:/test_explicit_both')
+    self.assertResponse(self.send(Ext(), '/test-explicit-both'),  200, 'path:/test-explicit-both')
+    self.assertResponse(self.send(Ext(), '/test_suppress'),       200, 'path:/test_suppress')
+    self.assertResponse(self.send(Ext(), '/test-suppress'),       404)
+    self.assertResponse(self.send(Ext(), '/test_implicit'),       200, 'path:/test_implicit')
+    self.assertResponse(self.send(Ext(), '/test-implicit'),       200, 'path:/test-implicit')
+    self.assertResponse(self.send(Ext(), '/test_ext.iso'),        200, 'path:/test_ext.iso')
+    self.assertResponse(self.send(Ext(), '/test-ext.iso'),        200, 'path:/test-ext.iso')
+    self.assertResponse(self.send(Ext(), '/test_ext.ogg'),        200, 'path:/test_ext.ogg')
+    self.assertResponse(self.send(Ext(), '/test-ext.ogg'),        200, 'path:/test-ext.ogg')
+    self.assertResponse(self.send(Ext(), '/test_ext.gif'),        404)
+    self.assertResponse(self.send(Ext(), '/test-ext.gif'),        404)
+    self.assertResponse(self.send(Ext(), '/test_ext'),            404)
+    self.assertResponse(self.send(Ext(), '/test-ext'),            404)
+    self.assertResponse(self.send(Ext(), '/test_sub1/foo'),       200, 'path:/test_sub1/foo')
+    self.assertResponse(self.send(Ext(), '/test-sub1/foo'),       200, 'path:/test-sub1/foo')
+    self.assertResponse(self.send(Ext(), '/test_sub2/foo'),       200, 'path:/test_sub2/foo')
+    self.assertResponse(self.send(Ext(), '/test-sub2/foo'),       404)
 
   #----------------------------------------------------------------------------
   # TEST @FIDDLE
@@ -848,19 +892,26 @@ class TestDispatcher(TestHelper):
     self.assertResponse(self.send(Root(), '/zig.txt'),  200, 'zig:/zig.txt')
     self.assertResponse(self.send(Root(), '/zig.json'), 404)
 
+  #----------------------------------------------------------------------------
   def test_expose_defaults_with_multiple_names(self):
     @expose_defaults(ext=('json', 'yaml'))
     class Root(Controller):
       @expose(name=('blue', 'moon'))
       def foo(self, request): return 'path:' + request.path
+    # note: this is violating the abstraction barrier... oh well. testing
+    #       the i-rep!... :)
     self.assertEqual(
-      sorted(getattr(Root().foo, PCATTR).expose[0]['name']),
+      #sorted(getattr(Root().foo, PCATTR).expose[0]['name']),
+      sorted(Dispatcher().makeMeta(Root().foo).expose.keys()),
       sorted(['blue.json', 'blue.yaml', 'moon.json', 'moon.yaml']))
     self.assertResponse(self.send(Root(), '/blue.html'), 404)
     self.assertResponse(self.send(Root(), '/blue'),      404)
     self.assertResponse(self.send(Root(), '/blue.json'), 200, 'path:/blue.json')
     self.assertResponse(self.send(Root(), '/blue.yaml'), 200, 'path:/blue.yaml')
+    self.assertResponse(self.send(Root(), '/moon.json'), 200, 'path:/moon.json')
+    self.assertResponse(self.send(Root(), '/moon.yaml'), 200, 'path:/moon.yaml')
 
 #------------------------------------------------------------------------------
 # end of $Id$
+# $ChangeLog$
 #------------------------------------------------------------------------------

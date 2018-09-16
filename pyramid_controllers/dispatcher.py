@@ -17,14 +17,19 @@ algorithm of the controller-based request dispatch mechanism.
 #       an @default receives ``None`` as the current path element
 #       being requested instead of ''... is that what it should be?...
 
-import os.path, types, re, inspect, six
+import os.path
+import types
+import re
+import inspect
+import types
+
+import six
 from six.moves import urllib
 from pyramid.exceptions import ConfigurationError
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException, HTTPError
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPForbidden
 from pyramid.renderers import render_to_response
-import types
 
 from .controller import Controller
 from . import decorator
@@ -61,6 +66,7 @@ class Dispatcher(object):
   #----------------------------------------------------------------------------
   def __init__(self,
                defaultForceSlash=True, raiseType=HTTPError, autoDecorate=True,
+               defaultDashUnder=True,
                raiseErrors=None, # DEPRECATED
                *args, **kw):
     '''
@@ -69,14 +75,22 @@ class Dispatcher(object):
 
     :Parameters:
 
-    defaultForceSlash : bool, optional, default: true
+    defaultForceSlash : bool, default: true
 
       Set the default value of @index's `forceSlash` parameter, which
       defaults to ``True``, i.e. index requests that do not have a
       trailing slash (``/``) will receive a 302 redirect with the
       slash appended.
 
-    raiseType : { type-or-class, list(type-or-class) }, optional, default: HTTPError
+    defaultDashUnder : bool, default: true
+
+      Set the default value of @expose's `dashUnder` parameter, which
+      defaults to ``True``, i.e. underscore-separated words in the
+      method name will also match the dash-separated version. Note
+      that explicitly setting the `name` parameter will make
+      `dashUnder` be ignored.
+
+    raiseType : { type-or-class, list(type-or-class) }, default: HTTPError
 
       Any responses or raised exceptions that are subclasses of
       `pyramid.httpexceptions.HTTPException` are handled specially: if
@@ -90,17 +104,20 @@ class Dispatcher(object):
       way by the dispatcher.
 
       The primary impact of this is when `pyramid-controllers` is
-      combined with `pyramid-tm` (the transaction manager): when an
-      HTTPException is *returned*, it will cause the transaction to
-      commit, whereas if it is *raised*, the transaction is rolled
-      back.
+      combined with `pyramid-tm` (the transaction manager) and the
+      `pyramid_tm.default_commit_veto` (or similar) veto hook is used:
+      when an exception is *raised* (no matter what kind), the
+      transaction is rolled back. When a response is *returned*, it
+      will be inspected by the `commit_veto` hook where only 4xx and
+      5xx status codes will be rolled back IFF (if and only if) the
+      x-tm:commit header is not set.
 
-    raiseErrors : bool, DEPRECATED, optional, default: null
+    raiseErrors : bool, DEPRECATED, default: null
 
       DEPRECATED -- only here for backward compatibility. Please use
       `raiseType` instead.
 
-    autoDecorate : bool, optional, default: true
+    autoDecorate : bool, default: true
 
       Primarily for internal purposes -- when set to truthy (the
       default), the result of doing a controller exposure instance
@@ -118,6 +135,7 @@ class Dispatcher(object):
     '''
     super(Dispatcher, self).__init__(*args, **kw)
     self.defaultForceSlash = defaultForceSlash
+    self.defaultDashUnder  = defaultDashUnder
     self.raiseType         = raiseType
     if raiseType is HTTPError and raiseErrors is not None:
       self.raiseType         = HTTPError if raiseErrors else ()
@@ -138,12 +156,32 @@ class Dispatcher(object):
         if getattr(apc, dectype, []):
           meta[dectype].append(attr)
       for exp in apc.expose or []:
-        if exp.name:
-          for ename in exp.name:
-            if not ename in meta.expose:
-              meta.expose[ename] = []
-            meta.expose[ename].append(attr)
+        for ename in self._handler_names(name, exp):
+          if ename not in meta.expose:
+            meta.expose[ename] = []
+          meta.expose[ename].append(attr)
     return meta
+
+  #----------------------------------------------------------------------------
+  def _handler_names(self, handler, spec):
+    name = handler
+    if not isstr(name):
+      name = handler.im_func.__name__
+    names = spec.name if spec.name else [ name ]
+    if isinstance(names, six.string_types):
+      names = [ names ]
+    if '_' in name \
+        and 'name' not in spec \
+        and spec.dashUnder is not False \
+        and ( spec.dashUnder is True or self.defaultDashUnder ):
+      names += [ name.replace('_', '-') ]
+    if 'ext' in spec and spec.ext is not None:
+      names = [
+        name + '.' + ext if ext is not None else name
+        for ext in spec.ext
+        for name in names
+      ]
+    return names
 
   #----------------------------------------------------------------------------
   def getMeta(self, controller):
@@ -171,7 +209,20 @@ class Dispatcher(object):
     #           - check response object type
     #           - extensible filter function
     if dectype == 'expose':
-      if spec.name and remainder[0] not in spec.name:
+      # TODO: *** HACK ALERT *** way too much abstraction violation here...
+      #       ==> create a better abstraction!
+      from .restcontroller import RestController, HTTP_METHODS, meth2action
+      # todo: *** hack alert *** this check for ``''`` is ridiculous...
+      if not remainder or remainder == [ '' ]:
+        if isinstance(controller, RestController):
+          # TODO: this is the wrong way of doing this... not only that,
+          #       but this is likely to result in a 404 instead of a 405...
+          if meth2action(request.method) not in self._handler_names(handler, spec):
+            return None
+        else:
+          return None
+      # /TODO
+      elif remainder[0] not in self._handler_names(handler, spec):
         return None
     if dectype in ('expose', 'index', 'default'):
       if spec.method and request.method not in spec.method:
@@ -247,6 +298,7 @@ class Dispatcher(object):
       if isinstance(attr, Controller):
         # todo: should this be `filtered` instead?...
         # todo: what if this is aliased...
+        # todo: what about `dashUnder` implications?...
         if includeIndirect or attr._pyramid_controllers.expose is True:
           hasIndirect = hasIndirect or not attr._pyramid_controllers.expose
           appto(name, attr)
@@ -262,6 +314,7 @@ class Dispatcher(object):
       if not apc:
         continue
       for exp in apc.expose or []:
+        # todo: what about `dashUnder` implications?...
         if exp.name:
           continue
         appto(name, attr)
@@ -301,13 +354,20 @@ class Dispatcher(object):
     return handler
 
   #----------------------------------------------------------------------------
-  def _filterNext(self, request, controller, remainder, handler):
+  def _filterNext(self, request, controller, remainder, handler, checkDashUnder=False):
+    # TODO: this `checkDashUnder`... a total hack.
     if not handler:
       return None
     if isinstance(handler, Controller):
       # todo: should this be `filtered` instead?...
       # todo: what if this is aliased...
       if handler._pyramid_controllers.expose is not True:
+        return None
+      if checkDashUnder \
+         and ( handler._pyramid_controllers.dashUnder is False
+               or ( handler._pyramid_controllers.dashUnder is not True
+                    and not self.defaultDashUnder )
+         ):
         return None
       return handler
     if type(handler) in (types.TypeType, types.ClassType):
@@ -334,6 +394,11 @@ class Dispatcher(object):
     handler = self._filterNext(request, controller, remainder, handler)
     if handler is not None:
       return handler
+    if '-' in aname:
+      handler = getattr(controller, aname.replace('-', '_'), None)
+      handler = self._filterNext(request, controller, remainder, handler, checkDashUnder=True)
+      if handler is not None:
+        return handler
     meta = self.getMeta(controller)
     for alias in meta.expose.get(name, []):
       ret = self._filterNext(request, controller, remainder, alias)
@@ -478,6 +543,8 @@ class Dispatcher(object):
         % (handler, request, response))
     return render_to_response(spec.renderer, response, request, package)
 
+
 #------------------------------------------------------------------------------
 # end of $Id$
+# $ChangeLog$
 #------------------------------------------------------------------------------

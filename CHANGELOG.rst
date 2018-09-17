@@ -3,6 +3,12 @@ ChangeLog
 =========
 
 
+v0.3.26
+=======
+
+* Fixed multi-decorator method lookup regression introduced in v0.3.25
+
+
 v0.3.25
 =======
 

@@ -51,6 +51,20 @@ class TestRestController(TestHelper):
     self.assertResponse(self.send(RestRoot(), '/', method='DELETE'), 405)
 
   #----------------------------------------------------------------------------
+  def test_sub_controller(self):
+    # 'RestControllers map HTTP methods to exposed controller methods'
+    class SubController(RestController):
+      @expose
+      def get(self, request): return 'ok.get:' + request.method + ':' + request.path
+      @expose
+      def put(self, request): return 'ok.put:' + request.method + ':' + request.path
+    class RestRoot(RestController):
+      sub = SubController()
+    self.assertResponse(self.send(RestRoot(), '/sub', method='GET'),    200, 'ok.get:GET:/sub')
+    self.assertResponse(self.send(RestRoot(), '/sub', method='PUT'),    200, 'ok.put:PUT:/sub')
+    self.assertResponse(self.send(RestRoot(), '/sub', method='DELETE'), 405)
+
+  #----------------------------------------------------------------------------
   def test_rest_custom_renderer(self):
     # 'RestControllers support custom renderers in @exposed methods'
     class RestRoot(RestController):

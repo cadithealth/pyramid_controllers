@@ -156,17 +156,16 @@ class Dispatcher(object):
         if getattr(apc, dectype, []):
           meta[dectype].append(attr)
       for exp in apc.expose or []:
-        for ename in self._handler_names(name, exp):
+        exp.name = self._handler_names(name, exp)
+        exp.ext = None
+        for ename in exp.name:
           if ename not in meta.expose:
             meta.expose[ename] = []
           meta.expose[ename].append(attr)
     return meta
 
   #----------------------------------------------------------------------------
-  def _handler_names(self, handler, spec):
-    name = handler
-    if not isstr(name):
-      name = handler.im_func.__name__
+  def _handler_names(self, name, spec):
     names = spec.name if spec.name else [ name ]
     if isinstance(names, six.string_types):
       names = [ names ]
@@ -209,7 +208,7 @@ class Dispatcher(object):
     #           - check response object type
     #           - extensible filter function
     if dectype == 'expose':
-      if remainder[0] not in self._handler_names(handler, spec):
+      if spec.name and remainder[0] not in spec.name:
         return None
     if dectype in ('expose', 'index', 'default'):
       if spec.method and request.method not in spec.method:

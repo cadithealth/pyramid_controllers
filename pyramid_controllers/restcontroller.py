@@ -104,7 +104,7 @@ class RestController(Controller):
       #       is a major, super-ugly, disgusting hack-on-a-hack that
       #       allows the RestController method to override the
       #       "renderer" in its @expose().
-      request._restcontroller_snaghack = (handler, 'expose')
+      request._restcontroller_snaghack = ( handler, 'expose', remainder )
       return se.args[0]
     # /HACKALERT
     # THE OLD NON-HACK WAY (but that breaks `@wrap` handling)

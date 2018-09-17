@@ -209,20 +209,7 @@ class Dispatcher(object):
     #           - check response object type
     #           - extensible filter function
     if dectype == 'expose':
-      # TODO: *** HACK ALERT *** way too much abstraction violation here...
-      #       ==> create a better abstraction!
-      from .restcontroller import RestController, HTTP_METHODS, meth2action
-      # todo: *** hack alert *** this check for ``''`` is ridiculous...
-      if not remainder or remainder == [ '' ]:
-        if isinstance(controller, RestController):
-          # TODO: this is the wrong way of doing this... not only that,
-          #       but this is likely to result in a 404 instead of a 405...
-          if meth2action(request.method) not in self._handler_names(handler, spec):
-            return None
-        else:
-          return None
-      # /TODO
-      elif remainder[0] not in self._handler_names(handler, spec):
+      if remainder[0] not in self._handler_names(handler, spec):
         return None
     if dectype in ('expose', 'index', 'default'):
       if spec.method and request.method not in spec.method:
@@ -533,7 +520,8 @@ class Dispatcher(object):
       return render_to_response(renderer, response, request, package)
     # NOTE: this is a *horrible* hack... see restcontroller.py why it
     #       is needed.
-    handler, dectype  = getattr(request, '_restcontroller_snaghack', (handler, dectype))
+    handler, dectype, remainder = \
+      getattr(request, '_restcontroller_snaghack', ( handler, dectype, remainder ))
     pc   = getattr(handler, self.PCATTR, adict())
     spec = self._select(request, response, controller, handler, dectype,
                         remainder, getattr(pc, dectype, []))
